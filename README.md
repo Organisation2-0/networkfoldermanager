@@ -1,127 +1,140 @@
 # NetworkFolderManager
 
-Version 1.0.0 · Herausgeber: noobnet.eu · https://github.com/Organisation2-0
+[Deutsch](README.de.md) · English
 
-Eine C#-WPF-Anwendung zum Verwalten von passwortgeschützten Netzwerkordnern – mit eigenem überwachten Netzwerkordner und einem Chat für alle im lokalen Netzwerk, die das Programm installiert haben. Design im Stil von noobnet.eu (Liquid Glass, dunkel, Akzent `#00d4ff`).
+A Windows desktop app (C# / WPF, .NET 8) that makes password-protected network folders easy to use – and adds a serverless, encrypted chat for everyone on your local network who runs the app.
 
-## Funktionen
+Dark "liquid glass" UI, available in **English and German**. Published by [noobnet.eu](https://github.com/Organisation2-0).
 
-**Ordner**
-- **Passwortgeschützte Netzwerkordner öffnen** – Freigaben mit Benutzername/Passwort verbinden (optional dauerhaft), trennen und im Explorer öffnen
-- **Netzwerkordner erkennen** – Rechner im Netzwerk scannen und deren Datei-Freigaben auflisten; Ordner anderer NetworkFolderManager-Nutzer erscheinen automatisch
-- **Manuelle Ordner** – `\\Server\Freigabe` direkt eingeben (wird gespeichert)
-- **Passwörter merken** – einmal eingeben, verschlüsselt in der Windows-Anmeldeinformationsverwaltung gespeichert; Ordner verbinden sich danach automatisch („Passwort vergessen“ löscht es wieder)
-- **Dateien hochladen** – per Dialog oder Drag & Drop, parallel, mit Fortschritt und Abbrechen; nichts wird überschrieben (`Datei (1).txt`)
+## Features
 
-**Eigener Netzwerkordner**
-- Wird (wenn gewählt) vom Installer angelegt, im Netzwerk freigegeben und automatisch überwacht – oder später unter *Einstellungen* (UAC-Abfrage)
-- **Passwortschutz:** eigenes Windows-Konto `NFM-<Freigabename>` mit selbst gewähltem Passwort, nur dieses Konto hat Zugriff. Ohne Passwort warnen Installer und Programm deutlich (gefährlich!)
-- **SMB3-Verschlüsselung** der Freigabe ist aktiv
-- Windows-Benachrichtigung, sobald eine neue Datei vollständig angekommen ist; Klick zeigt sie im Explorer
+**Network folders**
+- Connect to password-protected SMB shares (optionally persistent), disconnect, and open them in Explorer
+- Discover computers and their file shares on the local network; folders of other NetworkFolderManager users show up automatically
+- Add shares manually via `\\Server\Share`
+- Remember passwords securely in the Windows Credential Manager
+- Upload files via dialog or drag & drop – in parallel, with progress and cancel; existing files are never overwritten (`file (1).txt`)
 
-**Chat (wie WhatsApp, nur im lokalen Netz)**
-- Andere Installationen werden automatisch gefunden (UDP-Broadcast, Port 45821)
-- Nachrichten, Bilder und Dateien direkt von PC zu PC (Port 45822+), ohne Server/Internet
-- **TLS-verschlüsselt** mit eigenem Zertifikat pro Installation; Kontakte werden beim ersten Kontakt an ihrem Schlüssel erkannt (Sicherheitsnummer). Ändert sich der Schlüssel, warnt das Programm und sendet bis zur Bestätigung nichts
-- Zustellhäkchen ✓✓, Warteschlange für Offline-Kontakte (wird zugestellt, sobald sie online sind), „Erneut senden“
-- Bilder per 📎, Drag & Drop oder **Strg+V** aus der Zwischenablage; Vorschau im Chat
-- Ungelesen-Zähler, Benachrichtigungen, Verlauf wird lokal gespeichert
+**Your own shared folder**
+- Created and shared by the installer (optional) or later from *Settings* (UAC prompt)
+- Protected by a dedicated Windows account `NFM-<ShareName>` with a password you choose; only that account has access
+- SMB3 encryption enabled for the share
+- A Windows notification appears when a new file has fully arrived; clicking it shows the file in Explorer
 
-**Allgemein**
-- Autostart mit Windows (im Infobereich), Weiterlaufen im Tray, nur eine Instanz
-- **Automatische Updates** über GitHub-Releases (im Installer und unter *Einstellungen → Updates* schaltbar)
-- Fehlerprotokoll unter `%APPDATA%\NetworkFolderManager\error.log`
+**Local-network chat (think WhatsApp, but LAN only)**
+- Other installations are found automatically (UDP broadcast, port 45821)
+- Messages, pictures and files go directly from PC to PC (TCP port 45822+) – no server, no internet
+- TLS-encrypted with a per-installation certificate. Contacts are recognised by their key on first contact (security number); if a key changes, the app warns you and sends nothing until you confirm
+- Delivery ticks, a queue for offline contacts, "resend"
+- Send pictures via 📎, drag & drop or **Ctrl+V**; previews in the chat
+- Unread counters, notifications, locally stored history
 
-## Updates veröffentlichen
+**General**
+- Start with Windows (in the notification area), keep running in the tray, single instance
+- **Automatic updates** from GitHub Releases (can be switched off)
+- Language: English or German (Settings → Language)
+- Error log at `%APPDATA%\NetworkFolderManager\error.log`
 
-Das Programm sucht unter **https://github.com/Organisation2-0/NetworkFolderManager/releases** nach neuen Versionen (öffentliches Repository nötig).
+## Requirements
 
-1. Version in `NetworkFolderManager/NetworkFolderManager.csproj` erhöhen (`<Version>`).
-2. `build-installer.ps1` ausführen.
-3. Auf GitHub ein Release mit Tag `v<Version>` (z.B. `v1.0.2`) anlegen und diese beiden Dateien aus `output\` anhängen:
-   - `NetworkFolderManager-Setup-<Version>.exe`
-   - `NetworkFolderManager-Setup-<Version>.sha256`
-
-Installationen mit eingeschalteten Auto-Updates prüfen kurz nach dem Start und danach alle 6 Stunden, laden das Setup herunter, prüfen Prüfsumme, Herausgeber und Version und installieren es im Update-Modus (Windows fragt nach Administratorrechten). Netzwerkordner, Passwort und Einstellungen bleiben dabei erhalten; das Programm startet danach neu.
+- Windows 10 (1809) / Windows 11, 64-bit
+- Chat and discovery only work on networks Windows classifies as **Private** (or Domain)
+- No .NET installation needed – the release is self-contained
 
 ## Installation
 
-`output\NetworkFolderManager-Setup-<Version>.exe` ausführen. Zuerst wird die Sprache gewählt (**Deutsch / English**), danach fragt der Installer nach:
+Download `NetworkFolderManager-Setup-<version>.exe` from the [Releases page](https://github.com/Organisation2-0/NetworkFolderManager/releases) and run it. The installer asks for the language (English / German) and then offers:
 
-| Option | Wirkung |
+| Option | Effect |
 |---|---|
-| Eigenen Netzwerkordner erstellen … | Ordner (Standard `C:\Netzwerkordner`) + passwortgeschützte, verschlüsselte Freigabe anlegen, automatisch überwachen |
-| Mit Windows starten | Autostart im Infobereich (`HKCU\…\Run`) |
-| Automatisch aktualisieren | Neue Versionen von GitHub automatisch installieren (Standard: an) |
-| Ordner für Chat-Dateien | Standard: neuer Ordner `Dokumente\NetworkFolderManager` des Benutzers, frei wählbar |
-| Desktop-Verknüpfung | – |
+| Create my own network folder … | Creates the folder (default `C:\Netzwerkordner`) and a password-protected, encrypted share, monitored automatically |
+| Start with Windows | Autostart in the notification area (`HKCU\…\Run`) |
+| Update automatically | Install new versions from GitHub automatically (default: on) |
+| Folder for chat files | Default: `Documents\NetworkFolderManager`, can be changed |
+| Desktop shortcut | – |
 
-Immer: Firewall-Regel für den Chat sowie Datei-/Druckerfreigabe und Netzwerkerkennung (nur Profile *Privat*/*Domäne*).
-Bei der Deinstallation werden Freigabe, Zugangskonto und Firewall-Regel entfernt – die Dateien im Ordner bleiben erhalten.
+Always: a firewall rule for the chat plus file/printer sharing and network discovery (Private/Domain profiles only).
+Uninstalling removes the share, the access account and the firewall rule – files in the folder are kept.
 
-> **Hinweis:** Chat und Erkennung funktionieren nur in Netzwerken, die in Windows als **Privat** eingestuft sind.
+## Where data is stored
 
-## Speicherorte
-
-| Was | Wo |
+| What | Where |
 |---|---|
-| Einstellungen | `%APPDATA%\NetworkFolderManager\settings.json` (keine Passwörter) |
-| Chatverläufe | `%APPDATA%\NetworkFolderManager\chats\` |
-| Empfangene Chat-Dateien | `Dokumente\NetworkFolderManager\` (im Installer und unter *Einstellungen → Chat-Dateien* wählbar) |
-| Netzwerkordner-Konfiguration | `%ProgramData%\NetworkFolderManager\machine.json` |
-| Setup-Protokoll | `%ProgramData%\NetworkFolderManager\setup.log` |
-| Gespeicherte Ordner-Passwörter | Windows-Anmeldeinformationsverwaltung |
-| Chat-Zertifikat | Zertifikatspeicher des Benutzers (`certmgr.msc` → Eigene Zertifikate) |
+| Settings | `%APPDATA%\NetworkFolderManager\settings.json` (no passwords) |
+| Chat history | `%APPDATA%\NetworkFolderManager\chats\` |
+| Received chat files | `Documents\NetworkFolderManager\` (changeable) |
+| Shared-folder configuration | `%ProgramData%\NetworkFolderManager\machine.json` |
+| Setup log | `%ProgramData%\NetworkFolderManager\setup.log` |
+| Saved folder passwords | Windows Credential Manager |
+| Chat certificate | Current user's certificate store |
+| Language / auto-update flag | `HKCU\Software\noobnet.eu\NetworkFolderManager` |
 
-## Kommandozeile
+## Command line
 
-| Parameter | Zweck |
+| Parameter | Purpose |
 |---|---|
-| `--minimized` | Im Infobereich starten (Autostart) |
-| `--setup-share "<Pfad>" "<Name>" ["<Passwortdatei>"]` | Netzwerkordner + Zugangskonto + verschlüsselte Freigabe + Firewall einrichten (Admin); die Passwortdatei wird sofort gelöscht |
-| `--setup-firewall` | Nur Firewall-Regeln (Admin) |
-| `--remove-share` | Freigabe + Firewall-Regel entfernen (Admin) |
+| `--minimized` | Start in the notification area (autostart) |
+| `--setup-share "<path>" "<name>" ["<passwordfile>"]` | Create folder + access account + encrypted share + firewall rules (admin); the password file is deleted immediately |
+| `--setup-firewall` | Firewall rules only (admin) |
+| `--remove-share` | Remove share + firewall rule (admin) |
 
-Zum Testen mehrerer Instanzen auf einem PC: Umgebungsvariable `NFM_PROFILE=<Name>` setzen (eigene Einstellungen, eigener Chat-Port).
+To run several instances on one PC for testing, set the environment variable `NFM_PROFILE=<name>` (separate settings and chat port).
 
-## Ordnerstruktur
-
-```
-NetworkFolderManager/
-├── README.md
-├── build-installer.ps1                  # Publish + Inno Setup + portables ZIP
-├── installer/NetworkFolderManager.iss   # Inno-Setup-Skript
-└── NetworkFolderManager/
-    ├── App.xaml / .cs                   # Start, Einzelinstanz, Kommandozeile
-    ├── MainWindow.xaml / .cs            # Tabs: Ordner · Chat · Einstellungen
-    ├── Themes/NoobnetTheme.xaml         # noobnet.eu-Design
-    ├── Converters/
-    ├── Models/                          # NetworkFolder, ChatMessage, Peer
-    ├── Services/
-    │   ├── NetworkDiscoveryService.cs   # Scan, Verbinden/Trennen
-    │   ├── FileTransferService.cs       # Upload
-    │   ├── FolderMonitorService.cs      # Überwachung
-    │   ├── ShareSetupService.cs         # Freigabe/Firewall (Admin)
-    │   ├── PeerDiscoveryService.cs      # Nutzer im Netzwerk finden
-    │   ├── ChatService.cs               # Nachrichten/Dateien übertragen
-    │   ├── ChatStore.cs                 # Chatverlauf speichern
-    │   ├── AutostartService.cs
-    │   ├── NotificationService.cs       # Tray + Benachrichtigungen
-    │   └── SettingsService.cs
-    ├── ViewModels/                      # MainWindowViewModel, ChatViewModel
-    └── Dialogs/PasswordDialog.xaml / .cs
-```
-
-## Bauen
+## Building from source
 
 ```powershell
-# Entwickeln
+# Run in development
 cd NetworkFolderManager\NetworkFolderManager
 dotnet run
 
-# Installer (benötigt Inno Setup 6: winget install JRSoftware.InnoSetup)
-cd NetworkFolderManager
+# Installer + portable ZIP (needs Inno Setup 6: winget install JRSoftware.InnoSetup)
 powershell -NoProfile -ExecutionPolicy Bypass -File build-installer.ps1
 ```
 
-Ergebnis in `output\`: `NetworkFolderManager-Setup-<Version>.exe` und `NetworkFolderManager-<Version>-portable.zip` (eigenständig, keine .NET-Installation nötig).
+Output in `output\`: `NetworkFolderManager-Setup-<version>.exe` and `NetworkFolderManager-<version>-portable.zip`.
+
+## Publishing a release
+
+The app looks for updates in this repository's [Releases](https://github.com/Organisation2-0/NetworkFolderManager/releases).
+
+1. Bump `<Version>` in `NetworkFolderManager/NetworkFolderManager.csproj`.
+2. Run `build-installer.ps1`.
+3. Create a GitHub release tagged `v<version>` (e.g. `v1.0.1`) and attach:
+   - `NetworkFolderManager-Setup-<version>.exe`
+   - `NetworkFolderManager-Setup-<version>.sha256`
+
+Installations with auto-update enabled check shortly after start and every 6 hours, download the setup, verify checksum, publisher and version, and install it in update mode (Windows asks for administrator rights). Shares, passwords and settings are preserved and the app restarts afterwards.
+
+## Project layout
+
+```
+NetworkFolderManager/
+├── build-installer.ps1                  # publish + Inno Setup + portable ZIP
+├── installer/NetworkFolderManager.iss   # Inno Setup script
+└── NetworkFolderManager/
+    ├── App.xaml(.cs)                    # startup, single instance, command line
+    ├── MainWindow.xaml(.cs)             # tabs: Folders · Chat · Settings
+    ├── Themes/NoobnetTheme.xaml         # UI theme
+    ├── Models/                          # NetworkFolder, ChatMessage, Peer
+    ├── Services/
+    │   ├── NetworkDiscoveryService.cs   # scan, connect/disconnect
+    │   ├── FileTransferService.cs       # uploads
+    │   ├── FolderMonitorService.cs      # watches the own folder
+    │   ├── ShareSetupService.cs         # share/firewall setup (admin)
+    │   ├── PeerDiscoveryService.cs      # find other users (UDP)
+    │   ├── ChatService.cs               # TLS message/file transfer
+    │   ├── ChatStore.cs                 # chat history
+    │   ├── UpdateService.cs             # GitHub-based updates
+    │   ├── Loc.cs / Loc.Strings.cs      # English/German texts
+    │   └── …
+    ├── ViewModels/                      # MainWindowViewModel, ChatViewModel
+    └── Dialogs/
+```
+
+The UI texts live in `Services/Loc.Strings.cs` (German text → English translation); corrections and new languages are welcome as pull requests.
+
+## Security notes
+
+- A share **without** a password is open to everyone on the network – the app and installer warn clearly. Always set a password.
+- Chat traffic is TLS-encrypted, but trust is based on first contact (trust on first use). Compare the security number with the other person for sensitive use.
+- Only use it on networks you trust (Windows "Private" profile).
