@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>appicon.ico</ApplicationIcon>
+    <AssemblyName>NetworkFolderManager</AssemblyName>
+    <RootNamespace>NetworkFolderManager</RootNamespace>
+    <Version>1.0.1</Version>
+    <Company>noobnet.eu</Company>
+    <Authors>noobnet.eu</Authors>
+    <Copyright>© 2026 noobnet.eu</Copyright>
+    <PackageProjectUrl>https://github.com/Organisation2-0</PackageProjectUrl>
+    <Description>Netzwerkordner verwalten und im lokalen Netzwerk chatten</Description>
+    <Product>NetworkFolderManager</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="System.DirectoryServices.AccountManagement" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Programm-Icon: EXE (ApplicationIcon oben) und Fenster/Titelleiste (Resource) -->
+    <Resource Include="appicon.ico" />
+  </ItemGroup>
+
+</Project>
