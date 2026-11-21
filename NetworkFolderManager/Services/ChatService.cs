@@ -188,7 +188,7 @@ public sealed class ChatService : IDisposable
 
             var senderFingerprint = CertificateService.Fingerprint(stream.RemoteCertificate);
             if (!_verifySender(env.From, senderFingerprint))
-                throw new System.Security.SecurityException("Sicherheitsprüfung fehlgeschlagen: Der Absender hat einen anderen Schlüssel als bisher.");
+                throw new System.Security.SecurityException(Loc.T("Sicherheitsprüfung fehlgeschlagen: Der Absender hat einen anderen Schlüssel als bisher."));
 
             var message = new ChatMessage
             {
@@ -205,7 +205,7 @@ public sealed class ChatService : IDisposable
             if (env.Kind != MessageKind.Text)
             {
                 if (env.FileSize < 0 || env.FileSize > MaxFileSize)
-                    throw new InvalidDataException("Datei ist zu groß.");
+                    throw new InvalidDataException(Loc.T("Datei ist zu groß."));
 
                 var target = GetUniquePath(Path.Combine(ReceiveFolder, SanitizeFileName(env.FileName)));
                 Directory.CreateDirectory(ReceiveFolder);
@@ -220,7 +220,7 @@ public sealed class ChatService : IDisposable
                         timeout.CancelAfter(IdleTimeout); // Leerlauf-Timeout pro Block
                         var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), timeout.Token);
                         if (read == 0)
-                            throw new EndOfStreamException("Verbindung während der Übertragung getrennt.");
+                            throw new EndOfStreamException(Loc.T("Verbindung während der Übertragung getrennt."));
                         await file.WriteAsync(buffer.AsMemory(0, read), timeout.Token);
                         remaining -= read;
                     }
@@ -273,13 +273,13 @@ public sealed class ChatService : IDisposable
     public async Task SendAsync(Peer peer, ChatMessage message, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(peer.Address) || peer.Port <= 0)
-            throw new InvalidOperationException("Empfänger ist nicht erreichbar.");
+            throw new InvalidOperationException(Loc.T("Empfänger ist nicht erreichbar."));
 
         FileStream? file = null;
         if (message.Kind != MessageKind.Text)
         {
             if (string.IsNullOrEmpty(message.FilePath) || !File.Exists(message.FilePath))
-                throw new FileNotFoundException("Die Datei existiert nicht mehr.", message.FilePath);
+                throw new FileNotFoundException(Loc.T("Die Datei existiert nicht mehr."), message.FilePath);
             file = new FileStream(message.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, true);
             message.FileSize = file.Length;
         }
@@ -336,9 +336,9 @@ public sealed class ChatService : IDisposable
         timeout.CancelAfter(IdleTimeout);
         var ack = await ReadEnvelopeAsync(stream, timeout.Token);
         if (ack == null || ack.Type != "ack" || ack.Id != message.Id)
-            throw new IOException("Keine Empfangsbestätigung erhalten.");
+            throw new IOException(Loc.T("Keine Empfangsbestätigung erhalten."));
         if (!ack.Ok)
-            throw new IOException(ack.Error ?? "Empfänger hat die Nachricht abgelehnt.");
+            throw new IOException(ack.Error ?? Loc.T("Empfänger hat die Nachricht abgelehnt."));
     }
 
     private static async Task WriteEnvelopeAsync(Stream stream, ChatEnvelope env, CancellationToken ct)
@@ -356,7 +356,7 @@ public sealed class ChatService : IDisposable
         await stream.ReadExactlyAsync(len, ct);
         var size = BinaryPrimitives.ReadInt32LittleEndian(len);
         if (size <= 0 || size > MaxHeaderSize)
-            throw new InvalidDataException("Ungültiger Nachrichtenkopf.");
+            throw new InvalidDataException(Loc.T("Ungültiger Nachrichtenkopf."));
 
         var data = new byte[size];
         await stream.ReadExactlyAsync(data, ct);

@@ -76,7 +76,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<NewFileEventArgs> ReceivedFiles { get; } = new();
 
     [ObservableProperty]
-    private string _statusText = "Bereit";
+    private string _statusText = Loc.T("Bereit");
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ScanNetworkCommand))]
@@ -118,7 +118,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private double _uploadProgress;
 
     [ObservableProperty]
-    private string _monitorStatus = "Überwachung inaktiv.";
+    private string _monitorStatus = Loc.T("Überwachung inaktiv.");
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartMonitoringCommand))]
@@ -186,14 +186,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public bool HasUpdate => AvailableUpdate != null;
 
-    public string VersionText => $"Version {UpdateService.CurrentVersion} · noobnet.eu";
+    public string VersionText => Loc.T("Version {0} · noobnet.eu", UpdateService.CurrentVersion);
 
     private System.Windows.Threading.DispatcherTimer? _updateTimer;
 
     partial void OnAutoUpdateChanged(bool value)
     {
         UpdateService.AutoUpdateEnabled = value;
-        UpdateStatus = value ? "Automatische Updates sind eingeschaltet." : "Automatische Updates sind ausgeschaltet.";
+        UpdateStatus = value ? Loc.T("Automatische Updates sind eingeschaltet.") : Loc.T("Automatische Updates sind ausgeschaltet.");
         if (value)
             _ = CheckForUpdatesCoreAsync(automatic: true);
     }
@@ -222,17 +222,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
 
         IsUpdating = true;
-        UpdateStatus = "Suche nach Updates...";
+        UpdateStatus = Loc.T("Suche nach Updates...");
         try
         {
             AvailableUpdate = await UpdateService.CheckAsync();
             if (AvailableUpdate == null)
             {
-                UpdateStatus = $"Sie verwenden die neueste Version ({UpdateService.CurrentVersion}).";
+                UpdateStatus = Loc.T("Sie verwenden die neueste Version ({0}).", UpdateService.CurrentVersion);
                 return;
             }
 
-            UpdateStatus = $"Version {AvailableUpdate.Version} ist verfügbar.";
+            UpdateStatus = Loc.T("Version {0} ist verfügbar.", AvailableUpdate.Version);
             if (automatic)
             {
                 IsUpdating = false;
@@ -242,7 +242,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             LogService.Info($"Update-Prüfung fehlgeschlagen: {ex.GetBaseException().Message}");
-            UpdateStatus = "Update-Server nicht erreichbar. Später erneut versuchen.";
+            UpdateStatus = Loc.T("Update-Server nicht erreichbar. Später erneut versuchen.");
         }
         finally
         {
@@ -262,16 +262,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IsUpdating = true;
         try
         {
-            var progress = new Progress<double>(p => UpdateStatus = $"Update {update.Version} wird heruntergeladen... {p:0} %");
+            var progress = new Progress<double>(p => UpdateStatus = Loc.T("Update {0} wird heruntergeladen... {1} %", update.Version, p.ToString("0")));
             var setup = await UpdateService.DownloadAsync(update, progress);
 
-            NotificationService.ShowToastNotification("Update wird installiert",
-                $"NetworkFolderManager {update.Version} wird installiert und danach neu gestartet.");
-            UpdateStatus = $"Update {update.Version} wird installiert...";
+            NotificationService.ShowToastNotification(Loc.T("Update wird installiert"),
+                Loc.T("NetworkFolderManager {0} wird installiert und danach neu gestartet.", update.Version));
+            UpdateStatus = Loc.T("Update {0} wird installiert...", update.Version);
 
             if (!UpdateService.StartInstaller(setup))
             {
-                UpdateStatus = "Update abgebrochen (Administratorrechte wurden nicht erteilt).";
+                UpdateStatus = Loc.T("Update abgebrochen (Administratorrechte wurden nicht erteilt).");
                 return;
             }
 
@@ -283,7 +283,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             LogService.Error("Update/Install", ex);
-            UpdateStatus = $"Update fehlgeschlagen: {ex.GetBaseException().Message}";
+            UpdateStatus = Loc.T("Update fehlgeschlagen: {0}", ex.GetBaseException().Message);
         }
         finally
         {
@@ -297,6 +297,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     #endregion
 
+    #region Sprache
+
+    [ObservableProperty]
+    private string _languageStatus = Loc.T("Aktuelle Sprache: {0}. Eine Änderung wirkt nach einem Neustart des Programms.", Loc.IsEnglish ? "English" : "Deutsch");
+
+    [RelayCommand]
+    private void SetLanguageGerman() => ChangeLanguage("de");
+
+    [RelayCommand]
+    private void SetLanguageEnglish() => ChangeLanguage("en");
+
+    private void ChangeLanguage(string language)
+    {
+        Loc.SavedLanguage = language;
+        LanguageStatus = language == Loc.Language
+            ? Loc.T("Aktuelle Sprache: {0}. Eine Änderung wirkt nach einem Neustart des Programms.", Loc.IsEnglish ? "English" : "Deutsch")
+            : Loc.T("Sprache gespeichert. Bitte das Programm neu starten (Infobereich → Beenden, dann erneut öffnen).");
+    }
+
+    #endregion
+
     partial void OnAutostartChanged(bool value)
     {
         try
@@ -305,7 +326,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Autostart konnte nicht geändert werden: {ex.Message}";
+            StatusText = Loc.T("Autostart konnte nicht geändert werden: {0}", ex.Message);
         }
     }
 
@@ -349,7 +370,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private async Task ScanNetworkAsync()
     {
         IsScanning = true;
-        StatusText = "Netzwerk wird durchsucht...";
+        StatusText = Loc.T("Netzwerk wird durchsucht...");
 
         try
         {
@@ -367,12 +388,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
 
             await RefreshConnectionStatesAsync();
-            StatusText = $"{found.Count} Netzwerkordner gefunden ({added} neu)." +
-                         (found.Count == 0 ? " Tipp: Ordner über \\\\Server\\Freigabe manuell hinzufügen." : "");
+            StatusText = Loc.T("{0} Netzwerkordner gefunden ({1} neu).", found.Count, added) +
+                         (found.Count == 0 ? Loc.T(" Tipp: Ordner über \\\\Server\\Freigabe manuell hinzufügen.") : "");
         }
         catch (Exception ex)
         {
-            StatusText = $"Fehler beim Scannen: {ex.Message}";
+            StatusText = Loc.T("Fehler beim Scannen: {0}", ex.Message);
         }
         finally
         {
@@ -389,7 +410,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var folder = NetworkDiscoveryService.ParseUncPath(ManualPath);
         if (folder == null)
         {
-            StatusText = "Ungültiger Pfad. Format: \\\\Server\\Freigabe";
+            StatusText = Loc.T("Ungültiger Pfad. Format: \\\\Server\\Freigabe");
             return;
         }
 
@@ -397,7 +418,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (existing != null)
         {
             SelectedFolder = existing;
-            StatusText = $"{existing.DisplayName} ist bereits in der Liste.";
+            StatusText = Loc.T("{0} ist bereits in der Liste.", existing.DisplayName);
             return;
         }
 
@@ -409,7 +430,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SelectedFolder = folder;
         ManualPath = string.Empty;
         folder.IsConnected = await NetworkDiscoveryService.IsPathAccessibleAsync(folder.Path);
-        StatusText = $"{folder.DisplayName} hinzugefügt" + (folder.IsConnected ? " (erreichbar)." : ". Jetzt verbinden.");
+        StatusText = Loc.T("{0} hinzugefügt", folder.DisplayName) + (folder.IsConnected ? Loc.T(" (erreichbar).") : Loc.T(". Jetzt verbinden."));
     }
 
     private bool HasManualSelection() => SelectedFolder?.IsManual == true;
@@ -423,7 +444,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _settings.ManualFolders.RemoveAll(p => PathEquals(p, folder.Path));
         SettingsService.Save(_settings);
         NetworkFolders.Remove(folder);
-        StatusText = $"{folder.DisplayName} entfernt.";
+        StatusText = Loc.T("{0} entfernt.", folder.DisplayName);
     }
 
     private bool CanConnect() => SelectedFolder != null && !IsConnecting;
@@ -440,7 +461,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // 1. Gespeichertes Passwort vorhanden → ohne Nachfrage verbinden
         if (await TryConnectWithSavedCredentialsAsync(folder))
         {
-            StatusText = $"Verbunden mit {folder.DisplayName} (gespeichertes Passwort).";
+            StatusText = Loc.T("Verbunden mit {0} (gespeichertes Passwort).", folder.DisplayName);
             return;
         }
 
@@ -458,7 +479,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
 
         IsConnecting = true;
-        StatusText = $"Verbinde mit {folder.DisplayName}...";
+        StatusText = Loc.T("Verbinde mit {0}...", folder.DisplayName);
         try
         {
             await NetworkDiscoveryService.ConnectToFolderAsync(folder.Path, dialog.Username, dialog.Password, dialog.Remember);
@@ -477,18 +498,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    StatusText = $"Verbunden, aber Passwort konnte nicht gespeichert werden: {ex.Message}";
+                    StatusText = Loc.T("Verbunden, aber Passwort konnte nicht gespeichert werden: {0}", ex.Message);
                     return;
                 }
             }
-            StatusText = $"Verbunden mit {folder.DisplayName}." + (dialog.SavePassword ? " Passwort gespeichert." : "");
+            StatusText = Loc.T("Verbunden mit {0}.", folder.DisplayName) + (dialog.SavePassword ? Loc.T(" Passwort gespeichert.") : "");
         }
         catch (Exception ex)
         {
-            StatusText = $"Verbindung zu {folder.DisplayName} fehlgeschlagen.";
+            StatusText = Loc.T("Verbindung zu {0} fehlgeschlagen.", folder.DisplayName);
             MessageBox.Show(
-                $"Verbindung zu {folder.DisplayName} fehlgeschlagen:\n\n{ex.Message}",
-                "Verbindungsfehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                Loc.T("Verbindung zu {0} fehlgeschlagen:\n\n{1}", folder.DisplayName, ex.Message),
+                Loc.T("Verbindungsfehler"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -508,12 +529,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             folder.IsConnected = await NetworkDiscoveryService.IsPathAccessibleAsync(folder.Path);
             folder.Username = string.Empty;
             StatusText = folder.IsConnected
-                ? $"{folder.DisplayName} ist weiterhin ohne Anmeldung erreichbar."
-                : $"Verbindung zu {folder.DisplayName} getrennt.";
+                ? Loc.T("{0} ist weiterhin ohne Anmeldung erreichbar.", folder.DisplayName)
+                : Loc.T("Verbindung zu {0} getrennt.", folder.DisplayName);
         }
         catch (Exception ex)
         {
-            StatusText = $"Fehler beim Trennen: {ex.Message}";
+            StatusText = Loc.T("Fehler beim Trennen: {0}", ex.Message);
         }
     }
 
@@ -541,7 +562,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             // war nicht verbunden
         }
         folder.IsConnected = await NetworkDiscoveryService.IsPathAccessibleAsync(folder.Path);
-        StatusText = $"Gespeichertes Passwort für {folder.ComputerName} gelöscht.";
+        StatusText = Loc.T("Gespeichertes Passwort für {0} gelöscht.", folder.ComputerName);
     }
 
     private void MarkSavedCredentials(string server, bool saved)
@@ -588,7 +609,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Ordner konnte nicht geöffnet werden: {ex.Message}";
+            StatusText = Loc.T("Ordner konnte nicht geöffnet werden: {0}", ex.Message);
         }
     }
 
@@ -628,8 +649,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Alle Dateien (*.*)|*.*",
-            Title = "Datei zum Hochladen auswählen"
+            Filter = Loc.T("Alle Dateien (*.*)|*.*"),
+            Title = Loc.T("Datei zum Hochladen auswählen")
         };
 
         if (dialog.ShowDialog() == true)
@@ -641,8 +662,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Alle Dateien (*.*)|*.*",
-            Title = "Dateien zum Hochladen auswählen",
+            Filter = Loc.T("Alle Dateien (*.*)|*.*"),
+            Title = Loc.T("Dateien zum Hochladen auswählen"),
             Multiselect = true
         };
 
@@ -662,27 +683,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (IsUploading)
         {
-            StatusText = "Es läuft bereits ein Upload.";
+            StatusText = Loc.T("Es läuft bereits ein Upload.");
             return;
         }
 
         if (SelectedFolder is not { } folder)
         {
-            StatusText = "Bitte wählen Sie links einen Zielordner aus.";
+            StatusText = Loc.T("Bitte wählen Sie links einen Zielordner aus.");
             return;
         }
 
         var fileList = files.Where(File.Exists).ToList();
         if (fileList.Count == 0)
         {
-            StatusText = "Keine Dateien zum Hochladen (Ordner werden nicht unterstützt).";
+            StatusText = Loc.T("Keine Dateien zum Hochladen (Ordner werden nicht unterstützt).");
             return;
         }
 
         if (!await NetworkDiscoveryService.IsPathAccessibleAsync(folder.Path))
         {
             folder.IsConnected = false;
-            StatusText = $"{folder.DisplayName} ist nicht erreichbar. Bitte zuerst verbinden.";
+            StatusText = Loc.T("{0} ist nicht erreichbar. Bitte zuerst verbinden.", folder.DisplayName);
             return;
         }
         folder.IsConnected = true;
@@ -697,8 +718,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         UploadStatus = fileList.Count == 1
-            ? $"Lade {Path.GetFileName(fileList[0])} hoch..."
-            : $"Lade {fileList.Count} Dateien hoch...";
+            ? Loc.T("Lade {0} hoch...", Path.GetFileName(fileList[0]))
+            : Loc.T("Lade {0} Dateien hoch...", fileList.Count);
 
         try
         {
@@ -708,14 +729,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             UploadProgress = 100;
             UploadStatus = failed.Count == 0
-                ? $"{ok} Datei(en) erfolgreich nach {folder.DisplayName} hochgeladen."
-                : $"{ok}/{results.Count} hochgeladen. Fehler: " +
+                ? Loc.T("{0} Datei(en) erfolgreich nach {1} hochgeladen.", ok, folder.DisplayName)
+                : Loc.T("{0}/{1} hochgeladen. Fehler: ", ok, results.Count) +
                   string.Join("; ", failed.Take(3).Select(r => $"{r.FileName}: {r.ErrorMessage}"));
-            StatusText = "Upload abgeschlossen.";
+            StatusText = Loc.T("Upload abgeschlossen.");
         }
         catch (Exception ex)
         {
-            UploadStatus = $"Upload fehlgeschlagen: {ex.Message}";
+            UploadStatus = Loc.T("Upload fehlgeschlagen: {0}", ex.Message);
         }
         finally
         {
@@ -748,7 +769,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "Eigenen Ordner zur Überwachung auswählen"
+            Title = Loc.T("Eigenen Ordner zur Überwachung auswählen")
         };
         if (!string.IsNullOrWhiteSpace(OwnFolderPath) && Directory.Exists(OwnFolderPath))
             dialog.InitialDirectory = OwnFolderPath;
@@ -778,14 +799,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Ungültiger Pfad: {ex.Message}";
+            StatusText = Loc.T("Ungültiger Pfad: {0}", ex.Message);
             return;
         }
 
         if (!await NetworkDiscoveryService.IsPathAccessibleAsync(fullPath))
         {
-            StatusText = $"Ordner nicht erreichbar: {fullPath}";
-            MonitorStatus = "Ordner nicht erreichbar – ggf. zuerst verbinden.";
+            StatusText = Loc.T("Ordner nicht erreichbar: {0}", fullPath);
+            MonitorStatus = Loc.T("Ordner nicht erreichbar – ggf. zuerst verbinden.");
             return;
         }
 
@@ -795,7 +816,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Überwachung konnte nicht gestartet werden: {ex.Message}";
+            StatusText = Loc.T("Überwachung konnte nicht gestartet werden: {0}", ex.Message);
             return;
         }
 
@@ -807,8 +828,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             f.IsOwnFolder = IsOwnPath(f.Path);
 
         IsMonitoring = true;
-        MonitorStatus = $"Überwachung von {fullPath} aktiv.";
-        StatusText = "Überwachung aktiv.";
+        MonitorStatus = Loc.T("Überwachung von {0} aktiv.", fullPath);
+        StatusText = Loc.T("Überwachung aktiv.");
     }
 
     private bool CanStopMonitoring() => IsMonitoring;
@@ -818,8 +839,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         _folderMonitor.StopMonitoring();
         IsMonitoring = false;
-        MonitorStatus = "Überwachung gestoppt.";
-        StatusText = "Überwachung gestoppt.";
+        MonitorStatus = Loc.T("Überwachung gestoppt.");
+        StatusText = Loc.T("Überwachung gestoppt.");
     }
 
     [RelayCommand]
@@ -832,7 +853,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (File.Exists(file.FullPath))
                 System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{file.FullPath}\"");
             else
-                StatusText = $"{file.FileName} existiert nicht mehr.";
+                StatusText = Loc.T("{0} existiert nicht mehr.", file.FileName);
         }
         catch (Exception ex)
         {
@@ -849,11 +870,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 ReceivedFiles.RemoveAt(ReceivedFiles.Count - 1);
 
             NotificationService.ShowToastNotification(
-                "Neue Datei erhalten",
-                $"In Ihrem Ordner wurde eine neue Datei abgelegt:\n{e.FileName}",
+                Loc.T("Neue Datei erhalten"),
+                Loc.T("In Ihrem Ordner wurde eine neue Datei abgelegt:\n{0}", e.FileName),
                 e.FullPath);
 
-            StatusText = $"Neue Datei: {e.FileName}";
+            StatusText = Loc.T("Neue Datei: {0}", e.FileName);
         });
     }
 
@@ -863,7 +884,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             var path = OwnFolderPath;
             StopMonitoring();
-            MonitorStatus = $"Überwachung unterbrochen: {e.GetException().Message}. Neuer Versuch in 30 s...";
+            MonitorStatus = Loc.T("Überwachung unterbrochen: {0}. Neuer Versuch in 30 s...", e.GetException().Message);
 
             // Automatisch erneut verbinden (z.B. nach kurzem Netzwerkausfall)
             await Task.Delay(TimeSpan.FromSeconds(30));
@@ -884,7 +905,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void UpdateShareInfo()
     {
         OwnShareInfo = _machineConfig == null
-            ? "Noch kein eigener Netzwerkordner eingerichtet."
+            ? Loc.T("Noch kein eigener Netzwerkordner eingerichtet.")
             : $"{_machineConfig.UncPath}   ({_machineConfig.SharePath})";
 
         if (_machineConfig != null)
@@ -894,10 +915,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         ShareAccessInfo = _machineConfig?.IsProtected == true
-            ? $"Andere verbinden sich mit Benutzername  {_machineConfig.AccessUserQualified}  und dem festgelegten Passwort."
+            ? Loc.T("Andere verbinden sich mit Benutzername  {0}  und dem festgelegten Passwort.", _machineConfig.AccessUserQualified)
             : string.Empty;
         ShareEncryptionInfo = _machineConfig?.Encrypted == true
-            ? "Dateiübertragung verschlüsselt (SMB 3)"
+            ? Loc.T("Dateiübertragung verschlüsselt (SMB 3)")
             : string.Empty;
 
         OnPropertyChanged(nameof(HasOwnShare));
@@ -923,7 +944,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (own == null || NetworkFolders.Any(f => PathEquals(f.Path, own.Path)))
             return;
 
-        own.Description = "Mein Netzwerkordner";
+        own.Description = Loc.T("Mein Netzwerkordner");
         own.IsOwnFolder = IsOwnPath(own.Path);
         NetworkFolders.Insert(0, own);
     }
@@ -936,13 +957,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (string.IsNullOrWhiteSpace(NewSharePath) || string.IsNullOrWhiteSpace(NewShareName))
         {
-            StatusText = "Bitte Pfad und Freigabename angeben.";
+            StatusText = Loc.T("Bitte Pfad und Freigabename angeben.");
             return;
         }
 
         if (password != confirm)
         {
-            MessageBox.Show("Die Passwörter stimmen nicht überein.", "Netzwerkordner",
+            MessageBox.Show(Loc.T("Die Passwörter stimmen nicht überein."), Loc.T("Netzwerkordner"),
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -950,29 +971,29 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (password.Length == 0)
         {
             var answer = MessageBox.Show(
-                "Ohne Passwort ist Ihr Netzwerkordner NICHT geschützt!\n\n" +
+                Loc.T("Ohne Passwort ist Ihr Netzwerkordner NICHT geschützt!\n\n" +
                 "Jeder im Netzwerk mit Zugang zu diesem PC kann dann Dateien lesen, verändern oder löschen – " +
                 "und auch schädliche Dateien ablegen. Das ist gefährlich, besonders in fremden oder öffentlichen Netzwerken.\n\n" +
-                "Trotzdem ohne Passwort fortfahren?",
-                "Warnung: Ordner ohne Passwort", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                "Trotzdem ohne Passwort fortfahren?"),
+                Loc.T("Warnung: Ordner ohne Passwort"), MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
             if (answer != MessageBoxResult.Yes)
                 return;
         }
         else if (password.Length < 6)
         {
-            MessageBox.Show("Bitte ein Passwort mit mindestens 6 Zeichen wählen.", "Netzwerkordner",
+            MessageBox.Show(Loc.T("Bitte ein Passwort mit mindestens 6 Zeichen wählen."), Loc.T("Netzwerkordner"),
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        StatusText = "Netzwerkordner wird eingerichtet (Administratorrechte erforderlich)...";
+        StatusText = Loc.T("Netzwerkordner wird eingerichtet (Administratorrechte erforderlich)...");
         var ok = await ShareSetupService.RunElevatedSetupAsync(NewSharePath.Trim(), NewShareName.Trim(), password);
         _machineConfig = ShareSetupService.LoadMachineConfig();
         UpdateShareInfo();
 
         if (!ok || _machineConfig == null)
         {
-            StatusText = @"Netzwerkordner konnte nicht eingerichtet werden (abgebrochen oder Fehler – siehe %ProgramData%\NetworkFolderManager\setup.log).";
+            StatusText = Loc.T(@"Netzwerkordner konnte nicht eingerichtet werden (abgebrochen oder Fehler – siehe %ProgramData%\NetworkFolderManager\setup.log).");
             return;
         }
 
@@ -987,8 +1008,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         await RefreshConnectionStatesAsync();
 
         Chat.AnnounceNow();
-        StatusText = $"Netzwerkordner {_machineConfig.UncPath} eingerichtet und wird überwacht." +
-                     (_machineConfig.IsProtected ? $" Zugang: {_machineConfig.AccessUserQualified}" : " ACHTUNG: ohne Passwort!");
+        StatusText = Loc.T("Netzwerkordner {0} eingerichtet und wird überwacht.", _machineConfig.UncPath) +
+                     (_machineConfig.IsProtected ? Loc.T(" Zugang: {0}", _machineConfig.AccessUserQualified) : Loc.T(" ACHTUNG: ohne Passwort!"));
     }
 
     [RelayCommand]
@@ -1026,7 +1047,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 return;
             NetworkFolders.Add(folder);
         }
-        folder.Description = $"Ordner von {peer.DisplayName}";
+        folder.Description = Loc.T("Ordner von {0}", peer.DisplayName);
         folder.SuggestedUsername = peer.ShareUser;
 
         var check = NetworkDiscoveryService.IsPathAccessibleAsync(folder.Path);

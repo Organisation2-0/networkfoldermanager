@@ -159,7 +159,7 @@ public static class ShareSetupService
             var (code, output) = RunTool("net",
                 $"share \"{shareName}={path}\" \"/GRANT:{granteeName},CHANGE\" \"/GRANT:{admins},FULL\" \"/REMARK:NetworkFolderManager\"");
             if (code != 0)
-                throw new InvalidOperationException($"Freigabe konnte nicht erstellt werden: {output}");
+                throw new InvalidOperationException(Loc.T("Freigabe konnte nicht erstellt werden: {0}", output));
 
             // 5. SMB3-Verschlüsselung für diese Freigabe einschalten
             var escaped = shareName.Replace("'", "''");

@@ -1,6 +1,6 @@
 # NetworkFolderManager
 
-Version 1.0.1 · Herausgeber: noobnet.eu · https://github.com/Organisation2-0
+Version 1.0.0 · Herausgeber: noobnet.eu · https://github.com/Organisation2-0
 
 Eine C#-WPF-Anwendung zum Verwalten von passwortgeschützten Netzwerkordnern – mit eigenem überwachten Netzwerkordner und einem Chat für alle im lokalen Netzwerk, die das Programm installiert haben. Design im Stil von noobnet.eu (Liquid Glass, dunkel, Akzent `#00d4ff`).
 

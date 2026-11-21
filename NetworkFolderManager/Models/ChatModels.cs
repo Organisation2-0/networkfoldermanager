@@ -1,3 +1,4 @@
+using NetworkFolderManager.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
@@ -163,8 +164,8 @@ public partial class Peer : ObservableObject
 
     [JsonIgnore]
     public string StatusText => KeyChanged
-        ? "⚠ Sicherheitsschlüssel hat sich geändert"
+        ? Loc.T("⚠ Sicherheitsschlüssel hat sich geändert")
         : IsOnline
-        ? $"online · {MachineName}"
-        : LastSeen == default ? "offline" : $"zuletzt online {LastSeen:dd.MM. HH:mm}";
+        ? Loc.T("online · {0}", MachineName)
+        : LastSeen == default ? Loc.T("offline") : Loc.T("zuletzt online {0}", LastSeen.ToString("dd.MM. HH:mm"));
 }

@@ -63,7 +63,7 @@ public sealed class FileTransferService : IDisposable
             if (created)
                 TryDelete(destFilePath);
 
-            var error = ex is OperationCanceledException ? "Transfer abgebrochen." : ex.Message;
+            var error = ex is OperationCanceledException ? Loc.T("Transfer abgebrochen.") : ex.Message;
             var failed = new TransferResult(fileName, destFilePath, false, error);
             TransferCompleted?.Invoke(this, new TransferResultEventArgs(failed));
             return failed;

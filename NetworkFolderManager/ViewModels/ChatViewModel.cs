@@ -93,7 +93,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     private string _messageText = string.Empty;
 
     [ObservableProperty]
-    private string _networkStatus = "Chat wird gestartet...";
+    private string _networkStatus = Loc.T("Chat wird gestartet...");
 
     /// <summary>Gesamtzahl ungelesener Nachrichten (für das Badge am Chat-Tab).</summary>
     [ObservableProperty]
@@ -152,7 +152,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "Ordner für empfangene Bilder und Dateien wählen"
+            Title = Loc.T("Ordner für empfangene Bilder und Dateien wählen")
         };
         if (Directory.Exists(ReceiveFolder))
             dialog.InitialDirectory = ReceiveFolder;
@@ -191,11 +191,11 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             _chat.Start();
             _discovery.Start();
             _retryTimer.Start();
-            NetworkStatus = $"Suche nach anderen Nutzern im Netzwerk... (Port {_chat.Port})";
+            NetworkStatus = Loc.T("Suche nach anderen Nutzern im Netzwerk... (Port {0})", _chat.Port);
         }
         catch (Exception ex)
         {
-            NetworkStatus = $"Chat konnte nicht gestartet werden: {ex.Message}";
+            NetworkStatus = Loc.T("Chat konnte nicht gestartet werden: {0}", ex.Message);
         }
     }
 
@@ -306,8 +306,8 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(OnlineCount));
         var online = OnlineCount;
         NetworkStatus = online == 0
-            ? "Niemand online. Andere Nutzer erscheinen automatisch, sobald sie das Programm starten."
-            : $"{online} Nutzer online";
+            ? Loc.T("Niemand online. Andere Nutzer erscheinen automatisch, sobald sie das Programm starten.")
+            : Loc.T("{0} Nutzer online", online);
     }
 
     private void SortPeers()
@@ -350,8 +350,8 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Bilder oder Dateien senden",
-            Filter = "Alle Dateien (*.*)|*.*|Bilder|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp",
+            Title = Loc.T("Bilder oder Dateien senden"),
+            Filter = Loc.T("Alle Dateien (*.*)|*.*|Bilder|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp"),
             Multiselect = true
         };
         if (dialog.ShowDialog() == true)
@@ -497,8 +497,8 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             return;
 
         var answer = System.Windows.MessageBox.Show(
-            $"Chatverlauf mit {peer.DisplayName} löschen? Empfangene Dateien bleiben erhalten.",
-            "Chat löschen", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            Loc.T("Chatverlauf mit {0} löschen? Empfangene Dateien bleiben erhalten.", peer.DisplayName),
+            Loc.T("Chat löschen"), System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
         if (answer != System.Windows.MessageBoxResult.Yes)
             return;
 
@@ -573,7 +573,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
                 {
                     // Empfänger hat nicht den gemerkten Schlüssel → nicht senden
                     msg.Status = MessageStatus.Failed;
-                    msg.Error = "Sicherheitsprüfung fehlgeschlagen – der Schlüssel des Empfängers stimmt nicht.";
+                    msg.Error = Loc.T("Sicherheitsprüfung fehlgeschlagen – der Schlüssel des Empfängers stimmt nicht.");
                     break;
                 }
                 catch (IOException ex) when (ex.InnerException is not System.Net.Sockets.SocketException)
@@ -643,7 +643,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             {
                 var preview = e.Message.Kind switch
                 {
-                    MessageKind.Image => "📷 Bild" + (e.Message.HasText ? $": {e.Message.Text}" : ""),
+                    MessageKind.Image => Loc.T("📷 Bild") + (e.Message.HasText ? $": {e.Message.Text}" : ""),
                     MessageKind.File => $"📎 {e.Message.FileName}",
                     _ => e.Message.Text
                 };
@@ -676,7 +676,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             _ => Truncate(message.Text.Replace('\n', ' '), 60)
         };
         if (message.Outgoing)
-            peer.LastMessagePreview = "Du: " + peer.LastMessagePreview;
+            peer.LastMessagePreview = Loc.T("Du: ") + peer.LastMessagePreview;
 
         ChatStore.Save(peer);
         if (peer == SelectedPeer)

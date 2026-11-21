@@ -26,7 +26,7 @@ public static class NetworkDiscoveryService
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        progress?.Report("Suche Computer im Netzwerk...");
+        progress?.Report(Loc.T("Suche Computer im Netzwerk..."));
         var computers = await Task.Run(EnumerateComputers, cancellationToken);
 
         var results = new List<Models.NetworkFolder>();
@@ -44,7 +44,7 @@ public static class NetworkDiscoveryService
                 {
                     results.AddRange(shares);
                     done++;
-                    progress?.Report($"Freigaben werden abgefragt ({done}/{computers.Count})...");
+                    progress?.Report(Loc.T("Freigaben werden abgefragt ({0}/{1})...", done, computers.Count));
                 }
             });
 
@@ -67,7 +67,7 @@ public static class NetworkDiscoveryService
         if (parts.Length < 2)
             return null;
 
-        return CreateFolder(parts[0], parts[1], "Manuell hinzugefügt");
+        return CreateFolder(parts[0], parts[1], Loc.T("Manuell hinzugefügt"));
     }
 
     /// <summary>
@@ -231,7 +231,7 @@ public static class NetworkDiscoveryService
                         continue;
 
                     shares.Add(CreateFolder(computerName, info.shi1_netname,
-                        string.IsNullOrWhiteSpace(info.shi1_remark) ? "Netzwerkfreigabe" : info.shi1_remark));
+                        string.IsNullOrWhiteSpace(info.shi1_remark) ? Loc.T("Netzwerkfreigabe") : info.shi1_remark));
                 }
             }
         }
@@ -326,14 +326,14 @@ public static class NetworkDiscoveryService
 
     private static string DescribeError(int code) => code switch
     {
-        5 => "Zugriff verweigert.",
-        53 => "Netzwerkpfad nicht gefunden.",
-        67 => "Netzwerkname nicht gefunden.",
-        86 => "Falsches Passwort.",
-        1219 => "Es besteht bereits eine Verbindung mit anderen Anmeldedaten zu diesem Server.",
-        1326 => "Benutzername oder Passwort ist falsch.",
-        1203 => "Kein Netzwerkanbieter hat den Pfad akzeptiert.",
-        1222 => "Das Netzwerk ist nicht verfügbar.",
+        5 => Loc.T("Zugriff verweigert."),
+        53 => Loc.T("Netzwerkpfad nicht gefunden."),
+        67 => Loc.T("Netzwerkname nicht gefunden."),
+        86 => Loc.T("Falsches Passwort."),
+        1219 => Loc.T("Es besteht bereits eine Verbindung mit anderen Anmeldedaten zu diesem Server."),
+        1326 => Loc.T("Benutzername oder Passwort ist falsch."),
+        1203 => Loc.T("Kein Netzwerkanbieter hat den Pfad akzeptiert."),
+        1222 => Loc.T("Das Netzwerk ist nicht verfügbar."),
         _ => new Win32Exception(code).Message
     };
 }

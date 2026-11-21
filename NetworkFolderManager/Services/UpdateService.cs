@@ -146,16 +146,16 @@ public static class UpdateService
             await using var stream = File.OpenRead(file);
             var actual = Convert.ToHexString(await SHA256.HashDataAsync(stream, ct));
             if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("Die Prüfsumme des Updates stimmt nicht – Download wird verworfen.");
+                throw new InvalidDataException(Loc.T("Die Prüfsumme des Updates stimmt nicht – Download wird verworfen."));
         }
 
         // 2. Herausgeber und Version der Setup-Datei
         var info = FileVersionInfo.GetVersionInfo(file);
         // (Inno Setup füllt diese Felder mit Leerzeichen auf → Trim)
         if (info.CompanyName?.Trim() != "noobnet.eu" || info.ProductName?.Trim() != "NetworkFolderManager")
-            throw new InvalidDataException("Die heruntergeladene Datei stammt nicht von noobnet.eu.");
+            throw new InvalidDataException(Loc.T("Die heruntergeladene Datei stammt nicht von noobnet.eu."));
         if (!Version.TryParse(info.ProductVersion?.Trim(), out var fileVersion) || fileVersion < update.Version)
-            throw new InvalidDataException("Die Version der heruntergeladenen Datei passt nicht zum Update.");
+            throw new InvalidDataException(Loc.T("Die Version der heruntergeladenen Datei passt nicht zum Update."));
     }
 
     /// <summary>

@@ -129,6 +129,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 ; Automatische Updates (dieselbe Einstellung wie im Programm unter "Einstellungen")
 Root: HKCU; Subkey: "{#AppRegKey}"; ValueType: dword; ValueName: "AutoUpdate"; ValueData: 1; Tasks: autoupdate
 Root: HKCU; Subkey: "{#AppRegKey}"; ValueType: dword; ValueName: "AutoUpdate"; ValueData: 0; Tasks: not autoupdate
+; Sprache des Programms = gewählte Setup-Sprache (bei Updates bleibt die bisherige Einstellung erhalten)
+Root: HKCU; Subkey: "{#AppRegKey}"; ValueType: string; ValueName: "Language";     ValueData: "{code:GetAppLanguage}"; Check: not IsUpdate
 ; Gewählter Ordner für Chat-Dateien (die App übernimmt ihn beim nächsten Start)
 Root: HKCU; Subkey: "{#AppRegKey}"; ValueType: string; ValueName: "ReceiveFolder"; \
     ValueData: "{code:GetChatFolder}"; Flags: uninsdeletekey
@@ -229,6 +231,15 @@ begin
       Result := False;
     end;
   end;
+end;
+
+{ Sprachcode für das Programm: "de" oder "en" }
+function GetAppLanguage(Param: String): String;
+begin
+  if ActiveLanguage = 'german' then
+    Result := 'de'
+  else
+    Result := 'en';
 end;
 
 function GetChatFolder(Param: String): String;

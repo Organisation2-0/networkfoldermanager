@@ -92,8 +92,8 @@ public partial class MainWindow : Window
             {
                 _trayHintShown = true;
                 NotificationService.ShowToastNotification(
-                    "NetworkFolderManager läuft weiter",
-                    "Das Programm ist im Infobereich. Rechtsklick auf das Symbol → Beenden.");
+                    Loc.T("NetworkFolderManager läuft weiter"),
+                    Loc.T("Das Programm ist im Infobereich. Rechtsklick auf das Symbol → Beenden."));
             }
         }
     }

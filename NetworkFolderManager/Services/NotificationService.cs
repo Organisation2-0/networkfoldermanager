@@ -46,8 +46,8 @@ public static class NotificationService
         };
 
         var menu = new ContextMenuStrip();
-        menu.Items.Add("Öffnen", null, (_, _) => RestoreRequested?.Invoke(null, EventArgs.Empty));
-        menu.Items.Add("Beenden", null, (_, _) =>
+        menu.Items.Add(Loc.T("Öffnen"), null, (_, _) => RestoreRequested?.Invoke(null, EventArgs.Empty));
+        menu.Items.Add(Loc.T("Beenden"), null, (_, _) =>
         {
             IsExiting = true;
             Application.Current.Shutdown();

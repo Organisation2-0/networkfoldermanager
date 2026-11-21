@@ -76,9 +76,9 @@ public partial class App : Application
         {
             LogService.Error("UI", ex.Exception);
             System.Windows.MessageBox.Show(
-                $"Ein unerwarteter Fehler ist aufgetreten:\n{ex.Exception.GetType().Name}: {ex.Exception.Message}\n\n" +
-                $"Details stehen in:\n{LogService.LogFile}",
-                "Fehler",
+                Loc.T("Ein unerwarteter Fehler ist aufgetreten:\n{0}: {1}\n\nDetails stehen in:\n{2}",
+                    ex.Exception.GetType().Name, ex.Exception.Message, LogService.LogFile),
+                Loc.T("Fehler"),
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Error);
             ex.Handled = true;

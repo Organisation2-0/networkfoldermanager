@@ -1,6 +1,7 @@
 <Window x:Class="NetworkFolderManager.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:NetworkFolderManager.Services"
         xmlns:vm="clr-namespace:NetworkFolderManager.ViewModels"
         Title="NetworkFolderManager"
         Width="1180"
@@ -30,7 +31,7 @@
                 <!-- =========================================================
                      TAB 1: ORDNER
                      ========================================================= -->
-                <TabItem Header="Ordner">
+                <TabItem Header="{loc:Tr 'Ordner'}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="5*"/>
@@ -48,15 +49,15 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Netzwerkordner"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Netzwerkordner'}"/>
 
                                 <WrapPanel Grid.Row="1" Margin="-4,0,-4,4">
-                                    <Button Content="Netzwerk scannen" Command="{Binding ScanNetworkCommand}"/>
-                                    <Button Content="Verbinden" Style="{StaticResource GlassButton}" Command="{Binding ConnectToFolderCommand}"/>
-                                    <Button Content="Trennen" Style="{StaticResource GlassButton}" Command="{Binding DisconnectFromFolderCommand}"/>
-                                    <Button Content="Öffnen" Style="{StaticResource GlassButton}" Command="{Binding OpenInExplorerCommand}"/>
-                                    <Button Content="Passwort vergessen" Style="{StaticResource GlassButton}" Command="{Binding ForgetPasswordCommand}"
-                                            ToolTip="Gespeichertes Passwort für diesen Server löschen"/>
+                                    <Button Content="{loc:Tr 'Netzwerk scannen'}" Command="{Binding ScanNetworkCommand}"/>
+                                    <Button Content="{loc:Tr 'Verbinden'}" Style="{StaticResource GlassButton}" Command="{Binding ConnectToFolderCommand}"/>
+                                    <Button Content="{loc:Tr 'Trennen'}" Style="{StaticResource GlassButton}" Command="{Binding DisconnectFromFolderCommand}"/>
+                                    <Button Content="{loc:Tr 'Öffnen'}" Style="{StaticResource GlassButton}" Command="{Binding OpenInExplorerCommand}"/>
+                                    <Button Content="{loc:Tr 'Passwort vergessen'}" Style="{StaticResource GlassButton}" Command="{Binding ForgetPasswordCommand}"
+                                            ToolTip="{loc:Tr 'Gespeichertes Passwort für diesen Server löschen'}"/>
                                 </WrapPanel>
 
                                 <Grid Grid.Row="2" Margin="0,4,0,8">
@@ -67,17 +68,17 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBox Grid.Column="0"
                                              Text="{Binding ManualPath, UpdateSourceTrigger=PropertyChanged}"
-                                             ToolTip="UNC-Pfad manuell hinzufügen, z.B. \\SERVER\Freigabe">
+                                             ToolTip="{loc:Tr 'UNC-Pfad manuell hinzufügen, z.B. \\\\SERVER\\Freigabe'}">
                                         <TextBox.InputBindings>
                                             <KeyBinding Key="Enter" Command="{Binding AddManualFolderCommand}"/>
                                         </TextBox.InputBindings>
                                     </TextBox>
-                                    <TextBlock Grid.Column="0" Text="\\Server\Freigabe hinzufügen" IsHitTestVisible="False"
+                                    <TextBlock Grid.Column="0" Text="{loc:Tr '\\\\Server\\Freigabe hinzufügen'}" IsHitTestVisible="False"
                                                Margin="12,0" VerticalAlignment="Center" Foreground="{StaticResource TextDim}"
                                                Visibility="{Binding ManualPath, Converter={StaticResource NotEmptyToVisibility}, ConverterParameter=invert}"/>
-                                    <Button Grid.Column="1" Content="+" MinWidth="0" Width="40" Padding="0" FontSize="18" Margin="6,0,0,0" ToolTip="Hinzufügen"
+                                    <Button Grid.Column="1" Content="+" MinWidth="0" Width="40" Padding="0" FontSize="18" Margin="6,0,0,0" ToolTip="{loc:Tr 'Hinzufügen'}"
                                             Command="{Binding AddManualFolderCommand}"/>
-                                    <Button Grid.Column="2" Content="–" MinWidth="0" Width="40" Padding="0" FontSize="18" Margin="6,0,0,0" ToolTip="Manuellen Ordner entfernen"
+                                    <Button Grid.Column="2" Content="–" MinWidth="0" Width="40" Padding="0" FontSize="18" Margin="6,0,0,0" ToolTip="{loc:Tr 'Manuellen Ordner entfernen'}"
                                             Style="{StaticResource GlassButton}" Command="{Binding RemoveManualFolderCommand}"/>
                                 </Grid>
 
@@ -107,16 +108,16 @@
                                                         <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
                                                         <Border Style="{StaticResource Badge}" Background="#2600D4FF"
                                                                 Visibility="{Binding IsOwnFolder, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                            <TextBlock Text="eigener Ordner" FontSize="10" Foreground="{StaticResource Accent}"/>
+                                                            <TextBlock Text="{loc:Tr 'eigener Ordner'}" FontSize="10" Foreground="{StaticResource Accent}"/>
                                                         </Border>
                                                         <Border Style="{StaticResource Badge}" Background="{StaticResource GlassStrong}"
-                                                                ToolTip="Passwort gespeichert"
+                                                                ToolTip="{loc:Tr 'Passwort gespeichert'}"
                                                                 Visibility="{Binding HasSavedCredentials, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                            <TextBlock Text="&#xE192; gespeichert" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI" FontSize="10" Foreground="{StaticResource TextDim}"/>
+                                                            <TextBlock Text="{loc:Tr ' gespeichert'}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI" FontSize="10" Foreground="{StaticResource TextDim}"/>
                                                         </Border>
                                                         <Border Style="{StaticResource Badge}" Background="{StaticResource GlassStrong}"
                                                                 Visibility="{Binding IsManual, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                            <TextBlock Text="manuell" FontSize="10" Foreground="{StaticResource TextDim}"/>
+                                                            <TextBlock Text="{loc:Tr 'manuell'}" FontSize="10" Foreground="{StaticResource TextDim}"/>
                                                         </Border>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding Description}" Style="{StaticResource DimText}" TextWrapping="NoWrap"
@@ -133,9 +134,9 @@
                                 </ListBox>
 
                                 <DockPanel Grid.Row="4" Margin="2,8,2,0">
-                                    <TextBlock Style="{StaticResource DimText}" Text="{Binding NetworkFolders.Count, StringFormat='{}{0} Ordner'}"/>
+                                    <TextBlock Style="{StaticResource DimText}"><Run Text="{Binding NetworkFolders.Count, Mode=OneWay}"/><Run Text="{loc:Tr ' Ordner'}"/></TextBlock>
                                     <TextBlock Style="{StaticResource DimText}" HorizontalAlignment="Right"
-                                               Text="● grün = verbunden · Doppelklick = öffnen/verbinden"/>
+                                               Text="{loc:Tr '● grün = verbunden · Doppelklick = öffnen/verbinden'}"/>
                                 </DockPanel>
                             </Grid>
                         </ContentControl>
@@ -151,22 +152,22 @@
                             <!-- Upload -->
                             <ContentControl Grid.Row="0" Style="{StaticResource GlassCard}" Margin="0,0,0,14">
                                 <StackPanel>
-                                    <TextBlock Style="{StaticResource CardTitle}" Text="Datei-Upload"/>
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Datei-Upload'}"/>
                                     <TextBlock Style="{StaticResource DimText}" Margin="0,0,0,10">
-                                        <Run Text="Ziel:"/>
-                                        <Run Text="{Binding SelectedFolder.Path, Mode=OneWay, TargetNullValue='links einen Ordner auswählen', FallbackValue='links einen Ordner auswählen'}"
+                                        <Run Text="{loc:Tr 'Ziel:'}"/>
+                                        <Run Text="{Binding SelectedFolder.Path, Mode=OneWay, TargetNullValue={loc:Tr 'links einen Ordner auswählen'}, FallbackValue={loc:Tr 'links einen Ordner auswählen'}}"
                                              Foreground="{StaticResource Text}" FontWeight="SemiBold"/>
                                     </TextBlock>
 
                                     <Border CornerRadius="14" Padding="14" BorderThickness="1" BorderBrush="#4000D4FF" Background="#0A00D4FF">
-                                        <TextBlock Text="Dateien hierher ziehen – oder auswählen:" HorizontalAlignment="Center"
+                                        <TextBlock Text="{loc:Tr 'Dateien hierher ziehen – oder auswählen:'}" HorizontalAlignment="Center"
                                                    Foreground="{StaticResource Accent}"/>
                                     </Border>
 
                                     <WrapPanel Margin="-4,6,-4,0">
-                                        <Button Content="Eine Datei" Command="{Binding UploadFileCommand}"/>
-                                        <Button Content="Mehrere Dateien" Style="{StaticResource GlassButton}" Command="{Binding UploadMultipleFilesCommand}"/>
-                                        <Button Content="Abbrechen" Style="{StaticResource GlassButton}" Command="{Binding CancelUploadCommand}"
+                                        <Button Content="{loc:Tr 'Eine Datei'}" Command="{Binding UploadFileCommand}"/>
+                                        <Button Content="{loc:Tr 'Mehrere Dateien'}" Style="{StaticResource GlassButton}" Command="{Binding UploadMultipleFilesCommand}"/>
+                                        <Button Content="{loc:Tr 'Abbrechen'}" Style="{StaticResource GlassButton}" Command="{Binding CancelUploadCommand}"
                                                 Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                     </WrapPanel>
 
@@ -183,9 +184,9 @@
                                     <DockPanel>
                                         <Border DockPanel.Dock="Right" Style="{StaticResource Badge}" Background="#2630D158"
                                                 Visibility="{Binding IsMonitoring, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <TextBlock Text="● aktiv" FontSize="11" Foreground="{StaticResource Success}"/>
+                                            <TextBlock Text="{loc:Tr '● aktiv'}" FontSize="11" Foreground="{StaticResource Success}"/>
                                         </Border>
-                                        <TextBlock Style="{StaticResource CardTitle}" Text="Eigener Ordner – Benachrichtigungen"/>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Eigener Ordner – Benachrichtigungen'}"/>
                                     </DockPanel>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -194,13 +195,13 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBox Text="{Binding OwnFolderPath, UpdateSourceTrigger=PropertyChanged}"
                                                  IsEnabled="{Binding IsMonitoring, Converter={StaticResource InverseBool}}"/>
-                                        <Button Grid.Column="1" Content="…" MinWidth="0" Width="40" Padding="0" Margin="6,0,0,0" ToolTip="Ordner auswählen"
+                                        <Button Grid.Column="1" Content="…" MinWidth="0" Width="40" Padding="0" Margin="6,0,0,0" ToolTip="{loc:Tr 'Ordner auswählen'}"
                                                 Style="{StaticResource GlassButton}" Command="{Binding BrowseOwnFolderCommand}"/>
                                     </Grid>
                                     <WrapPanel Margin="-4,6,-4,0">
-                                        <Button Content="Überwachung starten" Command="{Binding StartMonitoringCommand}"/>
-                                        <Button Content="Stoppen" Style="{StaticResource GlassButton}" Command="{Binding StopMonitoringCommand}"/>
-                                        <Button Content="Ausgewählten Ordner verwenden" Style="{StaticResource GlassButton}" Command="{Binding UseAsOwnFolderCommand}"/>
+                                        <Button Content="{loc:Tr 'Überwachung starten'}" Command="{Binding StartMonitoringCommand}"/>
+                                        <Button Content="{loc:Tr 'Stoppen'}" Style="{StaticResource GlassButton}" Command="{Binding StopMonitoringCommand}"/>
+                                        <Button Content="{loc:Tr 'Ausgewählten Ordner verwenden'}" Style="{StaticResource GlassButton}" Command="{Binding UseAsOwnFolderCommand}"/>
                                     </WrapPanel>
                                     <TextBlock Text="{Binding MonitorStatus}" Style="{StaticResource DimText}" Margin="0,6,0,0"/>
                                 </StackPanel>
@@ -213,12 +214,12 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
-                                    <TextBlock Style="{StaticResource CardTitle}" Text="Neu im eigenen Ordner"/>
-                                    <TextBlock Grid.Row="1" Style="{StaticResource DimText}" Text="Noch keine neuen Dateien."
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Neu im eigenen Ordner'}"/>
+                                    <TextBlock Grid.Row="1" Style="{StaticResource DimText}" Text="{loc:Tr 'Noch keine neuen Dateien.'}"
                                                Visibility="{Binding ReceivedFiles.Count, Converter={StaticResource NotEmptyToVisibility}, ConverterParameter=invert}"/>
                                     <ListBox Grid.Row="1" ItemsSource="{Binding ReceivedFiles}" x:Name="ReceivedList"
                                              MouseDoubleClick="ReceivedList_MouseDoubleClick"
-                                             ToolTip="Doppelklick zeigt die Datei im Explorer">
+                                             ToolTip="{loc:Tr 'Doppelklick zeigt die Datei im Explorer'}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <DockPanel>
@@ -264,7 +265,7 @@
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Personen im Netzwerk" Margin="8,0,0,8"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Personen im Netzwerk'}" Margin="8,0,0,8"/>
 
                                 <ListBox Grid.Row="1" ItemsSource="{Binding Peers}" SelectedItem="{Binding SelectedPeer}">
                                     <ListBox.ItemTemplate>
@@ -308,7 +309,7 @@
 
                                 <StackPanel Grid.Row="2" Margin="8,8,8,0">
                                     <TextBlock Text="{Binding NetworkStatus}" Style="{StaticResource DimText}"/>
-                                    <Button Content="Empfangene Dateien öffnen" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
+                                    <Button Content="{loc:Tr 'Empfangene Dateien öffnen'}" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
                                             Margin="0,6,0,0" Command="{Binding OpenReceiveFolderCommand}"/>
                                 </StackPanel>
                             </Grid>
@@ -321,9 +322,9 @@
                                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                                             Visibility="{Binding HasSelectedPeer, Converter={StaticResource NotEmptyToVisibility}, ConverterParameter=invert}">
                                     <TextBlock Text="💬" FontFamily="Segoe UI Emoji" FontSize="48" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Wähle links eine Person aus" Style="{StaticResource Headline}" HorizontalAlignment="Center" Margin="0,10,0,6"/>
+                                    <TextBlock Text="{loc:Tr 'Wähle links eine Person aus'}" Style="{StaticResource Headline}" HorizontalAlignment="Center" Margin="0,10,0,6"/>
                                     <TextBlock Style="{StaticResource DimText}" HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="380"
-                                               Text="Alle im Netzwerk, die NetworkFolderManager installiert haben, erscheinen hier automatisch. Nachrichten, Bilder und Dateien gehen direkt von PC zu PC."/>
+                                               Text="{loc:Tr 'Alle im Netzwerk, die NetworkFolderManager installiert haben, erscheinen hier automatisch. Nachrichten, Bilder und Dateien gehen direkt von PC zu PC.'}"/>
                                 </StackPanel>
 
                                 <Grid Visibility="{Binding HasSelectedPeer, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -336,7 +337,7 @@
                                     <!-- Kopfzeile -->
                                     <Border BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" Padding="18,12">
                                         <DockPanel>
-                                            <Button DockPanel.Dock="Right" Content="Verlauf löschen" Style="{StaticResource GlassButton}"
+                                            <Button DockPanel.Dock="Right" Content="{loc:Tr 'Verlauf löschen'}" Style="{StaticResource GlassButton}"
                                                     Padding="12,6" Command="{Binding DeleteChatCommand}"/>
                                             <Grid Width="40" Height="40" Margin="0,0,12,0">
                                                 <Ellipse Fill="{StaticResource AvatarBrush}"/>
@@ -347,8 +348,8 @@
                                                 <TextBlock Text="{Binding SelectedPeer.DisplayName}" FontWeight="Bold" FontSize="15"/>
                                                 <TextBlock Text="{Binding SelectedPeer.StatusText}" Style="{StaticResource DimText}"/>
                                                 <TextBlock Style="{StaticResource DimText}" FontSize="11" Foreground="{StaticResource Success}"
-                                                           ToolTip="Sicherheitsnummer dieses Kontakts – zum Abgleichen mit der Person (steht bei ihr unter Einstellungen).">
-                                                    <Run Text="🔒 Verschlüsselt · Sicherheitsnummer"/>
+                                                           ToolTip="{loc:Tr 'Sicherheitsnummer dieses Kontakts – zum Abgleichen mit der Person (steht bei ihr unter Einstellungen).'}">
+                                                    <Run Text="{loc:Tr '🔒 Verschlüsselt · Sicherheitsnummer'}"/>
                                                     <Run Text="{Binding SelectedPeer.SecurityCode, Mode=OneWay}" FontFamily="Consolas"/>
                                                 </TextBlock>
                                             </StackPanel>
@@ -360,10 +361,10 @@
                                             Background="#F02A0F0E" BorderBrush="#80FF453A" BorderThickness="1"
                                             Visibility="{Binding SelectedPeer.KeyChanged, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
                                         <DockPanel>
-                                            <Button DockPanel.Dock="Right" Content="Neuen Schlüssel akzeptieren" Style="{StaticResource GlassButton}"
+                                            <Button DockPanel.Dock="Right" Content="{loc:Tr 'Neuen Schlüssel akzeptieren'}" Style="{StaticResource GlassButton}"
                                                     Command="{Binding AcceptNewKeyCommand}" VerticalAlignment="Center"/>
                                             <TextBlock TextWrapping="Wrap" Foreground="#FFB4AE" VerticalAlignment="Center"
-                                                       Text="⚠ Der Sicherheitsschlüssel dieses Kontakts hat sich geändert. Das passiert nach einer Neuinstallation – kann aber auch bedeuten, dass sich jemand als diese Person ausgibt. Nachrichten werden bis zur Bestätigung nicht gesendet. Fragen Sie die Person am besten kurz persönlich."/>
+                                                       Text="{loc:Tr '⚠ Der Sicherheitsschlüssel dieses Kontakts hat sich geändert. Das passiert nach einer Neuinstallation – kann aber auch bedeuten, dass sich jemand als diese Person ausgibt. Nachrichten werden bis zur Bestätigung nicht gesendet. Fragen Sie die Person am besten kurz persönlich.'}"/>
                                         </DockPanel>
                                     </Border>
 
@@ -400,7 +401,7 @@
                                                                             <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
                                                                             <TextBlock Style="{StaticResource DimText}">
                                                                                 <Run Text="{Binding FileSizeText, Mode=OneWay}"/>
-                                                                                <Run Text=" · Klicken zum Öffnen"/>
+                                                                                <Run Text="{loc:Tr ' · Klicken zum Öffnen'}"/>
                                                                             </TextBlock>
                                                                         </StackPanel>
                                                                     </DockPanel>
@@ -423,8 +424,8 @@
 
                                                             <!-- Fehler -->
                                                             <StackPanel x:Name="ErrorPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="0,4,0,0">
-                                                                <TextBlock Text="Nicht zugestellt. " Foreground="{StaticResource Danger}" FontSize="11"/>
-                                                                <Button Content="Erneut senden" Style="{StaticResource LinkButton}" FontSize="11"
+                                                                <TextBlock Text="{loc:Tr 'Nicht zugestellt. '}" Foreground="{StaticResource Danger}" FontSize="11"/>
+                                                                <Button Content="{loc:Tr 'Erneut senden'}" Style="{StaticResource LinkButton}" FontSize="11"
                                                                         Command="{Binding DataContext.Chat.RetryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                         CommandParameter="{Binding}" ToolTip="{Binding Error}"/>
                                                             </StackPanel>
@@ -438,7 +439,7 @@
                                                         </StackPanel>
                                                         <Border.ContextMenu>
                                                             <ContextMenu>
-                                                                <MenuItem Header="Im Ordner anzeigen"
+                                                                <MenuItem Header="{loc:Tr 'Im Ordner anzeigen'}"
                                                                           Command="{Binding PlacementTarget.Tag.ShowInFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding}"/>
                                                             </ContextMenu>
@@ -496,7 +497,7 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <Button Style="{StaticResource IconButton}" Content="&#xE723;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" ToolTip="Bild oder Datei senden"
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE723;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" ToolTip="{loc:Tr 'Bild oder Datei senden'}"
                                                     Command="{Binding AttachFileCommand}" VerticalAlignment="Bottom"/>
                                             <TextBox x:Name="ChatInput" Grid.Column="1" Margin="6,4"
                                                      Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
@@ -505,9 +506,9 @@
                                                      PreviewKeyDown="ChatInput_PreviewKeyDown"/>
                                             <TextBlock Grid.Column="1" Margin="18,0" VerticalAlignment="Center" IsHitTestVisible="False"
                                                        Foreground="{StaticResource TextDim}"
-                                                       Text="Nachricht schreiben… (Enter = senden, Strg+V = Bild einfügen)"
+                                                       Text="{loc:Tr 'Nachricht schreiben… (Enter = senden, Strg+V = Bild einfügen)'}"
                                                        Visibility="{Binding MessageText, Converter={StaticResource NotEmptyToVisibility}, ConverterParameter=invert}"/>
-                                            <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE724;" ToolTip="Senden"
+                                            <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE724;" ToolTip="{loc:Tr 'Senden'}"
                                                     AutomationProperties.Name="Senden"
                                                     Background="{StaticResource Accent}" Foreground="Black" BorderBrush="Transparent"
                                                     FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
@@ -523,7 +524,7 @@
                 <!-- =========================================================
                      TAB 3: EINSTELLUNGEN
                      ========================================================= -->
-                <TabItem Header="Einstellungen">
+                <TabItem Header="{loc:Tr 'Einstellungen'}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -534,19 +535,30 @@
                             <StackPanel Grid.Column="0" Margin="0,0,7,0">
                                 <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Style="{StaticResource CardTitle}" Text="Profil"/>
-                                        <TextBlock Style="{StaticResource DimText}" Text="So sehen dich andere im Chat:" Margin="0,0,0,6"/>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Profil'}"/>
+                                        <TextBlock Style="{StaticResource DimText}" Text="{loc:Tr 'So sehen dich andere im Chat:'}" Margin="0,0,0,6"/>
                                         <TextBox Text="{Binding DisplayName, UpdateSourceTrigger=LostFocus}"/>
                                     </StackPanel>
                                 </ContentControl>
 
                                 <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Style="{StaticResource CardTitle}" Text="Start &amp; Hintergrund"/>
-                                        <CheckBox Content="Mit Windows starten (im Infobereich)" IsChecked="{Binding Autostart}"/>
-                                        <CheckBox Content="Beim Schließen im Infobereich weiterlaufen" IsChecked="{Binding MinimizeToTray}"/>
-                                        <CheckBox Content="Ordner-Überwachung beim Start automatisch aktivieren" IsChecked="{Binding MonitorOnStartup}"/>
-                                        <CheckBox Content="Benachrichtigung bei neuen Chat-Nachrichten" IsChecked="{Binding ChatNotifications}"/>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Sprache'}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <Button Content="Deutsch" Style="{StaticResource GlassButton}" Command="{Binding SetLanguageGermanCommand}"/>
+                                            <Button Content="English" Style="{StaticResource GlassButton}" Command="{Binding SetLanguageEnglishCommand}"/>
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource DimText}" Text="{Binding LanguageStatus}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </ContentControl>
+
+                                <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Start &amp; Hintergrund'}"/>
+                                        <CheckBox Content="{loc:Tr 'Mit Windows starten (im Infobereich)'}" IsChecked="{Binding Autostart}"/>
+                                        <CheckBox Content="{loc:Tr 'Beim Schließen im Infobereich weiterlaufen'}" IsChecked="{Binding MinimizeToTray}"/>
+                                        <CheckBox Content="{loc:Tr 'Ordner-Überwachung beim Start automatisch aktivieren'}" IsChecked="{Binding MonitorOnStartup}"/>
+                                        <CheckBox Content="{loc:Tr 'Benachrichtigung bei neuen Chat-Nachrichten'}" IsChecked="{Binding ChatNotifications}"/>
                                     </StackPanel>
                                 </ContentControl>
 
@@ -554,28 +566,28 @@
                                     <StackPanel>
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" Text="{Binding VersionText}" Style="{StaticResource DimText}" VerticalAlignment="Center"/>
-                                            <TextBlock Style="{StaticResource CardTitle}" Text="Updates"/>
+                                            <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Updates'}"/>
                                         </DockPanel>
-                                        <CheckBox Content="Automatisch aktualisieren (empfohlen)" IsChecked="{Binding AutoUpdate}"/>
+                                        <CheckBox Content="{loc:Tr 'Automatisch aktualisieren (empfohlen)'}" IsChecked="{Binding AutoUpdate}"/>
                                         <TextBlock Style="{StaticResource DimText}" Margin="48,0,0,6"
-                                                   Text="Sucht regelmäßig nach neuen Versionen, lädt sie geprüft herunter und installiert sie (Windows fragt dabei nach Administratorrechten)."/>
+                                                   Text="{loc:Tr 'Sucht regelmäßig nach neuen Versionen, lädt sie geprüft herunter und installiert sie (Windows fragt dabei nach Administratorrechten).'}"/>
                                         <WrapPanel Margin="-4,0">
-                                            <Button Content="Jetzt nach Updates suchen" Style="{StaticResource GlassButton}" Command="{Binding CheckForUpdatesCommand}"/>
-                                            <Button Content="Update installieren" Command="{Binding InstallUpdateCommand}"
+                                            <Button Content="{loc:Tr 'Jetzt nach Updates suchen'}" Style="{StaticResource GlassButton}" Command="{Binding CheckForUpdatesCommand}"/>
+                                            <Button Content="{loc:Tr 'Update installieren'}" Command="{Binding InstallUpdateCommand}"
                                                     Visibility="{Binding HasUpdate, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         </WrapPanel>
                                         <TextBlock Text="{Binding UpdateStatus}" Style="{StaticResource DimText}" Margin="0,4,0,0"
                                                    Visibility="{Binding UpdateStatus, Converter={StaticResource NotEmptyToVisibility}}"/>
-                                        <Button Content="Versionshinweise auf GitHub" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
+                                        <Button Content="{loc:Tr 'Versionshinweise auf GitHub'}" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
                                                 Margin="0,6,0,0" Command="{Binding OpenReleasesPageCommand}"/>
                                     </StackPanel>
                                 </ContentControl>
 
                                 <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Style="{StaticResource CardTitle}" Text="Chat-Dateien"/>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Chat-Dateien'}"/>
                                         <TextBlock Style="{StaticResource DimText}" Margin="0,0,0,6"
-                                                   Text="Hier werden empfangene Bilder und Dateien gespeichert:"/>
+                                                   Text="{loc:Tr 'Hier werden empfangene Bilder und Dateien gespeichert:'}"/>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
@@ -583,13 +595,13 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBox Text="{Binding Chat.ReceiveFolder, UpdateSourceTrigger=LostFocus}"/>
                                             <Button Grid.Column="1" Content="…" MinWidth="0" Width="40" Padding="0" Margin="6,0,0,0"
-                                                    ToolTip="Ordner auswählen" Style="{StaticResource GlassButton}"
+                                                    ToolTip="{loc:Tr 'Ordner auswählen'}" Style="{StaticResource GlassButton}"
                                                     Command="{Binding Chat.BrowseReceiveFolderCommand}"/>
                                         </Grid>
                                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                            <Button Content="Ordner öffnen" Style="{StaticResource LinkButton}" Margin="0,0,16,0"
+                                            <Button Content="{loc:Tr 'Ordner öffnen'}" Style="{StaticResource LinkButton}" Margin="0,0,16,0"
                                                     Command="{Binding Chat.OpenReceiveFolderCommand}"/>
-                                            <Button Content="Standard (Dokumente) wiederherstellen" Style="{StaticResource LinkButton}"
+                                            <Button Content="{loc:Tr 'Standard (Dokumente) wiederherstellen'}" Style="{StaticResource LinkButton}"
                                                     Command="{Binding Chat.ResetReceiveFolderCommand}"/>
                                         </StackPanel>
                                     </StackPanel>
@@ -599,9 +611,9 @@
                             <StackPanel Grid.Column="1" Margin="7,0,0,0">
                                 <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Style="{StaticResource CardTitle}" Text="Mein Netzwerkordner"/>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Mein Netzwerkordner'}"/>
                                         <TextBlock Text="{Binding OwnShareInfo}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                        <Button Content="Im Explorer öffnen" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
+                                        <Button Content="{loc:Tr 'Im Explorer öffnen'}" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
                                                 Command="{Binding OpenOwnShareCommand}"
                                                 Visibility="{Binding HasOwnShare, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
@@ -609,23 +621,23 @@
                                         <Border CornerRadius="12" Padding="12,10" Margin="0,8,0,0" Background="#1A30D158" BorderBrush="#4D30D158" BorderThickness="1"
                                                 Visibility="{Binding IsShareProtected, Converter={StaticResource BooleanToVisibilityConverter}}">
                                             <StackPanel>
-                                                <TextBlock Text="🔒 Passwortgeschützt" FontWeight="SemiBold" Foreground="{StaticResource Success}"/>
+                                                <TextBlock Text="{loc:Tr '🔒 Passwortgeschützt'}" FontWeight="SemiBold" Foreground="{StaticResource Success}"/>
                                                 <TextBlock Text="{Binding ShareAccessInfo}" Style="{StaticResource DimText}" Margin="0,2,0,0"/>
                                             </StackPanel>
                                         </Border>
                                         <Border CornerRadius="12" Padding="12,10" Margin="0,8,0,0" Background="#26FF453A" BorderBrush="#80FF453A" BorderThickness="1"
                                                 Visibility="{Binding IsShareUnprotected, Converter={StaticResource BooleanToVisibilityConverter}}">
                                             <StackPanel>
-                                                <TextBlock Text="⚠ Ohne Passwort – gefährlich!" FontWeight="Bold" Foreground="{StaticResource Danger}"/>
+                                                <TextBlock Text="{loc:Tr '⚠ Ohne Passwort – gefährlich!'}" FontWeight="Bold" Foreground="{StaticResource Danger}"/>
                                                 <TextBlock Style="{StaticResource DimText}" Margin="0,2,0,0" Foreground="#FFB4AE"
-                                                           Text="Jeder im Netzwerk mit Zugang zu diesem PC kann Dateien lesen, ändern, löschen oder Schadsoftware ablegen. Bitte unten ein Passwort festlegen."/>
+                                                           Text="{loc:Tr 'Jeder im Netzwerk mit Zugang zu diesem PC kann Dateien lesen, ändern, löschen oder Schadsoftware ablegen. Bitte unten ein Passwort festlegen.'}"/>
                                             </StackPanel>
                                         </Border>
                                         <TextBlock Text="{Binding ShareEncryptionInfo, StringFormat='🔐 {0}'}" Style="{StaticResource DimText}" Margin="0,6,0,0"
                                                    Visibility="{Binding ShareEncryptionInfo, Converter={StaticResource NotEmptyToVisibility}}"/>
 
                                         <TextBlock Style="{StaticResource DimText}" Margin="0,14,0,6"
-                                                   Text="Ordner anlegen/freigeben oder Passwort ändern. Für den Zugang wird ein eigenes Windows-Konto mit diesem Passwort angelegt – Ihr persönliches Passwort bleibt geheim. (Administratorrechte erforderlich)"/>
+                                                   Text="{loc:Tr 'Ordner anlegen/freigeben oder Passwort ändern. Für den Zugang wird ein eigenes Windows-Konto mit diesem Passwort angelegt – Ihr persönliches Passwort bleibt geheim. (Administratorrechte erforderlich)'}"/>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -637,39 +649,39 @@
                                                 <RowDefinition/>
                                                 <RowDefinition/>
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="Ordner:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
+                                            <TextBlock Text="{loc:Tr 'Ordner:'}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
                                             <TextBox Grid.Column="1" Text="{Binding NewSharePath, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
-                                            <TextBlock Grid.Row="1" Text="Freigabename:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
+                                            <TextBlock Grid.Row="1" Text="{loc:Tr 'Freigabename:'}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
                                             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewShareName, UpdateSourceTrigger=PropertyChanged}" Margin="0,2"/>
-                                            <TextBlock Grid.Row="2" Text="Passwort:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
+                                            <TextBlock Grid.Row="2" Text="{loc:Tr 'Passwort:'}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
                                             <PasswordBox x:Name="SharePasswordBox" Grid.Row="2" Grid.Column="1" Margin="0,2" PasswordChar="●"/>
-                                            <TextBlock Grid.Row="3" Text="Wiederholen:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
+                                            <TextBlock Grid.Row="3" Text="{loc:Tr 'Wiederholen:'}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextDim}"/>
                                             <PasswordBox x:Name="SharePasswordConfirmBox" Grid.Row="3" Grid.Column="1" Margin="0,2" PasswordChar="●"/>
                                         </Grid>
                                         <TextBlock Style="{StaticResource DimText}" FontSize="11" Margin="0,4,0,0" Foreground="#FFB4AE"
-                                                   Text="Leeres Passwort = Ordner ohne Schutz (nicht empfohlen, gefährlich)."/>
-                                        <Button Content="🛡  Einrichten / Passwort ändern" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                                   Text="{loc:Tr 'Leeres Passwort = Ordner ohne Schutz (nicht empfohlen, gefährlich).'}"/>
+                                        <Button Content="{loc:Tr '🛡  Einrichten / Passwort ändern'}" HorizontalAlignment="Left" Margin="0,8,0,0"
                                                 Click="SetupShare_Click"/>
                                     </StackPanel>
                                 </ContentControl>
 
                                 <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Style="{StaticResource CardTitle}" Text="Hinweise"/>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Hinweise'}"/>
                                         <TextBlock Style="{StaticResource DimText}"
-                                                   Text="• Chat und Erkennung funktionieren nur in Netzwerken, die in Windows als „Privat“ eingestuft sind (Einstellungen → Netzwerk &amp; Internet → Eigenschaften)."/>
+                                                   Text="{loc:Tr '• Chat und Erkennung funktionieren nur in Netzwerken, die in Windows als „Privat“ eingestuft sind (Einstellungen → Netzwerk &amp; Internet → Eigenschaften).'}"/>
                                         <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0"
-                                                   Text="• Nachrichten, Bilder und Dateien im Chat gehen direkt von PC zu PC im lokalen Netz – ohne Server, TLS-verschlüsselt. Jeder Kontakt wird beim ersten Kontakt an seinem Schlüssel erkannt; ändert sich dieser, warnt das Programm."/>
+                                                   Text="{loc:Tr '• Nachrichten, Bilder und Dateien im Chat gehen direkt von PC zu PC im lokalen Netz – ohne Server, TLS-verschlüsselt. Jeder Kontakt wird beim ersten Kontakt an seinem Schlüssel erkannt; ändert sich dieser, warnt das Programm.'}"/>
                                         <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0"
-                                                   Text="• Passwörter für fremde Netzwerkordner werden verschlüsselt in der Windows-Anmeldeinformationsverwaltung gespeichert."/>
+                                                   Text="{loc:Tr '• Passwörter für fremde Netzwerkordner werden verschlüsselt in der Windows-Anmeldeinformationsverwaltung gespeichert.'}"/>
                                         <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0"
-                                                   Text="• Fehlerprotokoll (bei Problemen bitte mitschicken): %APPDATA%\NetworkFolderManager\error.log"/>
+                                                   Text="{loc:Tr '• Fehlerprotokoll (bei Problemen bitte mitschicken): %APPDATA%\\NetworkFolderManager\\error.log'}"/>
                                         <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0">
-                                            <Run Text="• Ihre Sicherheitsnummer im Chat:"/>
+                                            <Run Text="{loc:Tr '• Ihre Sicherheitsnummer im Chat:'}"/>
                                             <Run Text="{Binding Chat.OwnSecurityCode, Mode=OneWay}" FontFamily="Consolas" Foreground="{StaticResource Accent}"/>
                                         </TextBlock>
                                         <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0"
-                                                   Text="• Empfangene Bilder und Dateien landen im Ordner unter „Chat-Dateien“ (Standard: Dokumente\NetworkFolderManager)."/>
+                                                   Text="{loc:Tr '• Empfangene Bilder und Dateien landen im Ordner unter „Chat-Dateien“ (Standard: Dokumente\\NetworkFolderManager).'}"/>
                                     </StackPanel>
                                 </ContentControl>
                             </StackPanel>
