@@ -138,3 +138,7 @@ The UI texts live in `Services/Loc.Strings.cs` (German text → English translat
 - A share **without** a password is open to everyone on the network – the app and installer warn clearly. Always set a password.
 - Chat traffic is TLS-encrypted, but trust is based on first contact (trust on first use). Compare the security number with the other person for sensitive use.
 - Only use it on networks you trust (Windows "Private" profile).
+
+## License
+
+[MIT](LICENSE) © 2026 noobnet.eu

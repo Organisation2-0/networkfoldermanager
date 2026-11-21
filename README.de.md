@@ -128,3 +128,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build-installer.ps1
 ```
 
 Ergebnis in `output\`: `NetworkFolderManager-Setup-<Version>.exe` und `NetworkFolderManager-<Version>-portable.zip` (eigenständig, keine .NET-Installation nötig).
+
+## Lizenz
+
+[MIT](LICENSE) © 2026 noobnet.eu
