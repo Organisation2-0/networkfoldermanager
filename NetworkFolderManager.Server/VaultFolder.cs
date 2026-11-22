@@ -14,10 +14,10 @@ public sealed class VaultException : Exception
         Code = code;
     }
 
-    public static VaultException NotFound(string path) => new(404, "notFound", $"„{path}“ wurde nicht gefunden.");
-    public static VaultException Exists(string path) => new(409, "exists", $"„{path}“ existiert bereits.");
-    public static VaultException NoParent(string path) => new(409, "noParent", $"Übergeordneter Ordner von „{path}“ fehlt.");
-    public static VaultException BadPath() => new(400, "badPath", "Ungültiger Pfad oder Name.");
+    public static VaultException NotFound(string path) => new(404, "notFound", $"\"{path}\" was not found.");
+    public static VaultException Exists(string path) => new(409, "exists", $"\"{path}\" already exists.");
+    public static VaultException NoParent(string path) => new(409, "noParent", $"The parent folder of \"{path}\" does not exist.");
+    public static VaultException BadPath() => new(400, "badPath", "Invalid path or name.");
 }
 
 public sealed class IndexEntry
@@ -87,7 +87,7 @@ public sealed class VaultFolder
         }
 
         var plain = FolderCrypto.Open(key, File.ReadAllBytes(folder.IndexFile), IndexAad)
-                    ?? throw new InvalidDataException("Inhaltsverzeichnis des Ordners konnte nicht entschlüsselt werden.");
+                    ?? throw new InvalidDataException("The folder index could not be decrypted.");
         var entries = JsonSerializer.Deserialize<List<IndexEntry>>(plain, JsonOptions) ?? new();
         foreach (var e in entries)
             folder._entries[e.Path] = e;
@@ -331,7 +331,7 @@ public sealed class VaultFolder
         {
             // in sich selbst verschieben – nur erlaubt, wenn es reine Umbenennung in Groß-/Kleinschreibung ist
             if (!from.Equals(to, StringComparison.OrdinalIgnoreCase))
-                throw new VaultException(400, "badPath", "Ein Ordner kann nicht in sich selbst verschoben werden.");
+                throw new VaultException(400, "badPath", "A folder cannot be moved into itself.");
         }
 
         var orphanBlobs = new List<string>();

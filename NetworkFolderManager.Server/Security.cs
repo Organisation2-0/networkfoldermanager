@@ -41,9 +41,9 @@ public static class Passwords
     public static string? Validate(string? password)
     {
         if (string.IsNullOrEmpty(password) || password.Length < MinLength)
-            return $"Das Passwort muss mindestens {MinLength} Zeichen lang sein.";
+            return $"The password must be at least {MinLength} characters long.";
         if (password.Length > 256)
-            return "Das Passwort ist zu lang.";
+            return "The password is too long.";
         return null;
     }
 }
@@ -197,18 +197,18 @@ public static partial class Names
     public static string? ValidateUsername(string? name) =>
         name != null && UsernameRegex().IsMatch(name)
             ? null
-            : "Benutzername: 3–32 Zeichen, nur Buchstaben, Ziffern, Punkt, Minus und Unterstrich.";
+            : "Username: 3–32 characters, only letters, digits, dot, hyphen and underscore.";
 
     public static string? ValidateFolderName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return "Bitte einen Ordnernamen angeben.";
+            return "Please enter a folder name.";
         if (name.Length > 64)
-            return "Der Ordnername darf höchstens 64 Zeichen lang sein.";
+            return "The folder name must not be longer than 64 characters.";
         if (name != name.Trim() || name.EndsWith('.') || name.StartsWith('.'))
-            return "Der Ordnername darf nicht mit Leerzeichen oder Punkt beginnen/enden.";
+            return "The folder name must not start or end with a space or dot.";
         if (name.IndexOfAny(new[] { '/', '\\', ':', '*', '?', '"', '<', '>', '|', '%', '#' }) >= 0 || name.Any(char.IsControl))
-            return "Der Ordnername darf keines dieser Zeichen enthalten: / \\ : * ? \" < > | % #";
+            return "The folder name must not contain any of these characters: / \\ : * ? \" < > | % #";
         return null;
     }
 

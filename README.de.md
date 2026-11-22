@@ -2,7 +2,7 @@
 
 Deutsch · [English](README.md)
 
-Version 1.1.0 · Herausgeber: noobnet.eu · https://github.com/Organisation2-0
+Version 1.1.1 · Herausgeber: noobnet.eu · https://github.com/Organisation2-0
 
 Eine C#-Anwendung für **Windows** (WPF) und **macOS** (Avalonia) zum Verwalten von passwortgeschützten Netzwerkordnern – mit eigenem überwachten Netzwerkordner und einem Chat für alle im lokalen Netzwerk, die das Programm installiert haben. Design im Stil von noobnet.eu (Liquid Glass, dunkel, Akzent `#00d4ff`).
 
@@ -118,7 +118,7 @@ Ein kleiner Dienst ohne Oberfläche, der auf einem beliebigen Gerät im Netzwerk
 
 **Linux** (systemd):
 ```sh
-unzip nfm-server-1.1.0-linux-x64.zip -d nfm && cd nfm
+unzip nfm-server-1.1.1-linux-x64.zip -d nfm && cd nfm
 sudo sh install-linux.sh            # Dienst + Konto "nfm" + Firewall (ufw/firewalld)
 sudo nfm-server admin add julian    # Admin-Konto anlegen (fragt nach dem Passwort)
 ```
@@ -148,6 +148,8 @@ Optionen: `--data <Ordner>` (oder `NFM_SERVER_DATA`), `--port <Port>`, `--passwo
 - **Admin:** Ist ein Admin-Profil angemeldet, erscheint oben der Tab **Admin**.
 - **macOS, iPhone, Linux:** im Browser `https://<Server-IP>:45830` öffnen. Für eine Anwendung im Dock: Safari → *Ablage → Zum Dock hinzufügen*.
 - **Netzlaufwerk auf dem Mac:** Zertifikat (Link in der Web-App, `/ca.crt`) per Doppelklick in den Schlüsselbund, dort *Immer vertrauen*. Dann Finder → *Gehe zu → Mit Server verbinden* (⌘K) → `https://<Server-IP>:45830/dav/<Ordnername>/` · Name: Ordnername · Passwort: Ordnerpasswort.
+
+**Sprache:** Der Server selbst (Kommandozeile, Protokoll, Installationsskripte) ist komplett auf Englisch. Web-App und Windows-App lassen sich auf Deutsch oder Englisch umstellen; die Wahl wird im Profil gespeichert und gilt nach der Anmeldung auf allen Geräten (Windows-App: nach einem Neustart).
 
 > **Wichtig:** Ein vergessenes Ordnerpasswort kann niemand zurücksetzen – auch der Admin nicht. Der Ordner kann dann nur gelöscht werden.
 

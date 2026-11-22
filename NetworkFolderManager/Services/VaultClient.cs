@@ -144,7 +144,7 @@ public sealed class VaultClient : IDisposable
         }
         var status = (int)res.StatusCode;
         res.Dispose();
-        throw new VaultApiException(status, err?.Code ?? "http" + status, Loc.T(err?.Error ?? $"HTTP {status}"));
+        throw new VaultApiException(status, err?.Code ?? "http" + status, ServerErrors.Message(err?.Code, err?.Error ?? $"HTTP {status}"));
     }
 
     private async Task<T> SendAsync<T>(HttpMethod method, string url, object? body = null, string? folderToken = null, CancellationToken ct = default)
@@ -200,6 +200,10 @@ public sealed class VaultClient : IDisposable
             Token = null;
         }
     }
+
+    /// <summary>Bevorzugte Sprache im Profil speichern (gilt auf allen Geräten).</summary>
+    public Task<UserDto> SetLanguageAsync(string language) =>
+        SendAsync<UserDto>(HttpMethod.Put, "api/auth/language", new LanguageRequest { Language = language });
 
     public Task<UserDto> ChangePasswordAsync(string oldPassword, string newPassword) =>
         SendAsync<UserDto>(HttpMethod.Post, "api/auth/password", new ChangePasswordRequest { OldPassword = oldPassword, NewPassword = newPassword });

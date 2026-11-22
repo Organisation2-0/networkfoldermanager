@@ -209,6 +209,12 @@ public static partial class Loc
         ("Das Zertifikat des Servers hat sich geändert oder ist ungültig. Verbindung aus Sicherheitsgründen abgelehnt.", "The server certificate has changed or is invalid. Connection refused for security reasons."),
         ("Server {0} nicht erreichbar: {1}", "Server {0} not reachable: {1}"),
         ("Zeitüberschreitung bei der Verbindung zu {0}.", "Connection to {0} timed out."),
+        // Sprache / Neustart
+        ("Jetzt neu starten", "Restart now"),
+        ("Die Sprache wird auch in deinen Server-Profilen gespeichert und gilt dann auf allen Geräten.", "The language is also stored in your server profiles and then applies on all devices."),
+        ("Sprache aus deinem Profil", "Language from your profile"),
+        ("Dein Profil ist auf {0} eingestellt. Programm jetzt neu starten, um die Sprache zu übernehmen?", "Your profile is set to {0}. Restart the program now to apply the language?"),
+        ("Sprache aus deinem Profil übernommen ({0}) – wirkt nach einem Neustart.", "Language taken from your profile ({0}) – applies after a restart."),
         // Fehlermeldungen des Servers
         ("Benutzername oder Passwort ist falsch.", "Wrong username or password."),
         ("Falsches Ordnerpasswort.", "Wrong folder password."),

@@ -49,6 +49,23 @@ public partial class MainWindow : Window
             UpdateChatVisibility();
         };
 
+        // Sprache aus dem Server-Profil übernommen → Neustart anbieten
+        ViewModel.Servers.ProfileLanguageApplied += (_, language) => Dispatcher.BeginInvoke(() =>
+        {
+            var name = language == "en" ? "English" : "Deutsch";
+            if (!IsVisible)
+            {
+                ViewModel.StatusText = Loc.T("Sprache aus deinem Profil übernommen ({0}) – wirkt nach einem Neustart.", name);
+                return;
+            }
+            if (Dialogs.FormDialog.Confirm(this, Loc.T("Sprache aus deinem Profil"),
+                    Loc.T("Dein Profil ist auf {0} eingestellt. Programm jetzt neu starten, um die Sprache zu übernehmen?", name),
+                    Loc.T("Jetzt neu starten"), danger: false))
+                App.Restart();
+            else
+                ViewModel.StatusText = Loc.T("Sprache aus deinem Profil übernommen ({0}) – wirkt nach einem Neustart.", name);
+        });
+
         // Admin-Tab verschwindet beim Abmelden → auf den Server-Tab wechseln
         ViewModel.Servers.AdminAccessChanged += (_, _) =>
         {

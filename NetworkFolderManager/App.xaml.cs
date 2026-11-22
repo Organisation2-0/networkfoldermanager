@@ -46,6 +46,21 @@ public partial class App : Application
             }
         }
 
+        // ---- Neustart (z.B. Sprachwechsel): warten, bis die alte Instanz beendet ist ----
+        if (args.Length >= 2 && args[0] == "--after-restart" && int.TryParse(args[1], out var oldPid))
+        {
+            try
+            {
+                using var old = System.Diagnostics.Process.GetProcessById(oldPid);
+                old.WaitForExit(15000);
+            }
+            catch
+            {
+                // bereits beendet
+            }
+            args = args.Skip(2).ToArray();
+        }
+
         // ---- Nur eine Instanz: zweiter Start holt das vorhandene Fenster nach vorne ----
         _singleInstanceMutex = new Mutex(true, @"Local\NetworkFolderManager_SingleInstance" + SettingsService.Profile, out var isNew);
         if (!isNew)
@@ -114,6 +129,26 @@ public partial class App : Application
         })
         { IsBackground = true, Name = "ShowSignal" };
         showThread.Start();
+    }
+
+    /// <summary>Programm neu starten (z.B. damit eine geänderte Sprache wirkt).</summary>
+    public static void Restart()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!)
+            {
+                Arguments = $"--after-restart {Environment.ProcessId}",
+                UseShellExecute = false
+            });
+        }
+        catch (Exception ex)
+        {
+            LogService.Error("Restart", ex);
+            return;
+        }
+        NotificationService.MarkExiting();
+        Current.Shutdown();
     }
 
     protected override void OnExit(ExitEventArgs e)

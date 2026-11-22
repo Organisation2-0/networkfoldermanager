@@ -98,6 +98,8 @@ public sealed class UserRecord
     public bool MustChangePassword { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLogin { get; set; }
+    /// <summary>Preferred UI language of the clients ("de"/"en"), synced across devices.</summary>
+    public string? Language { get; set; }
 }
 
 public sealed class UsersDb
@@ -186,7 +188,7 @@ public sealed class JsonFile<T> where T : class, new()
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Datei {_path} ist beschädigt: {ex.Message}", ex);
+            throw new InvalidOperationException($"File {_path} is corrupted: {ex.Message}", ex);
         }
         _stamp = DateTime.MinValue;
         return new T();

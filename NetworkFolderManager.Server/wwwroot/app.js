@@ -4,8 +4,75 @@
 (() => {
 
 // ---------------------------------------------------------------- Sprache
-const EN = !(navigator.language || 'de').toLowerCase().startsWith('de');
+// Reihenfolge: Profil (nach der Anmeldung) > zuletzt gewählt (dieser Browser) > Browsersprache
+const storedLang = (() => { try { return localStorage.getItem('nfm.lang'); } catch { return null; } })();
+let EN = storedLang ? storedLang === 'en' : !(navigator.language || 'de').toLowerCase().startsWith('de');
+const LOCALE = () => (EN ? 'en-GB' : 'de-DE');
 document.documentElement.lang = EN ? 'en' : 'de';
+
+/** Sprache wechseln; angemeldet → auch im Profil speichern (gilt dann auf allen Geräten und in der Windows-App). */
+async function setLanguage(lang, saveToProfile = true) {
+  EN = lang === 'en';
+  document.documentElement.lang = lang;
+  try { localStorage.setItem('nfm.lang', lang); } catch { /* egal */ }
+  if (saveToProfile && S.user && !S.user.mustChangePassword && S.user.language !== lang) {
+    try { S.user = await api('PUT', '/auth/language', { language: lang }); } catch { /* offline o.ä. */ }
+  }
+  render();
+}
+
+/** Nach der Anmeldung: Profilsprache übernehmen bzw. – falls noch keine gesetzt – die aktuelle speichern. */
+async function applyProfileLanguage() {
+  if (!S.user || S.user.mustChangePassword) return;
+  const lang = EN ? 'en' : 'de';
+  if (S.user.language === 'de' || S.user.language === 'en') {
+    if (S.user.language !== lang) {
+      EN = S.user.language === 'en';
+      document.documentElement.lang = S.user.language;
+      try { localStorage.setItem('nfm.lang', S.user.language); } catch { }
+    }
+  } else {
+    try { S.user = await api('PUT', '/auth/language', { language: lang }); } catch { }
+  }
+}
+
+// Der Server antwortet auf Englisch; Fehler werden anhand des Codes übersetzt.
+const ERRORS_DE = {
+  tooManyAttempts: 'Zu viele Fehlversuche. Bitte in einigen Minuten erneut versuchen.',
+  badLogin: 'Benutzername oder Passwort ist falsch.',
+  wrongCurrentPassword: 'Das bisherige Passwort ist falsch.',
+  wrongPassword: 'Falsches Ordnerpasswort.',
+  samePassword: 'Das neue Passwort muss sich vom bisherigen unterscheiden.',
+  notFound: 'Nicht gefunden.',
+  notOwner: 'Das darf nur der Besitzer des Ordners.',
+  ownerMustOpenFirst: 'Dieser Ordner muss zuerst von seinem Besitzer geöffnet werden.',
+  mustChangePassword: 'Dieser Ordner wurde für dich angelegt. Bitte lege beim ersten Öffnen ein eigenes Passwort fest.',
+  isDir: 'Das ist ein Ordner.',
+  noUser: 'Diesen Benutzer gibt es nicht.',
+  cannotDeleteSelf: 'Du kannst dein eigenes Profil hier nicht löschen.',
+  badServerName: 'Bitte einen Servernamen (1–64 Zeichen) angeben.',
+  unauthorized: 'Bitte anmelden.',
+  mustChangeAccountPassword: 'Bitte zuerst ein eigenes Passwort für dein Profil festlegen.',
+  notAdmin: 'Nur für Admins.',
+  csrf: 'Anfrage abgelehnt.',
+  badRequest: 'Ungültige Anfrage.',
+  io: 'Speicherfehler auf dem Server.',
+  folderLocked: 'Der Ordner ist gesperrt. Bitte erneut das Ordnerpasswort eingeben.',
+  tooLarge: 'Anfrage zu groß.',
+  exists: 'Ein Element mit diesem Namen existiert bereits.',
+  noParent: 'Der übergeordnete Ordner existiert nicht.',
+  badPath: 'Ungültiger Pfad oder Name.',
+  weakPassword: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
+  badUsername: 'Benutzername: 3–32 Zeichen, nur Buchstaben, Ziffern, Punkt, Minus und Unterstrich.',
+  badName: 'Ungültiger Ordnername: 1–64 Zeichen, ohne / \\ : * ? " < > | % # und nicht mit Leerzeichen oder Punkt am Anfang/Ende.',
+  userExists: 'Dieser Benutzername ist bereits vergeben.',
+  badSetupCode: 'Der Setup-Code ist falsch.',
+  registrationClosed: 'Auf diesem Server können keine neuen Profile angelegt werden. Bitte den Admin fragen.',
+  lastAdmin: 'Der letzte Admin kann nicht entfernt werden.',
+  folderExists: 'Ein Ordner mit diesem Namen existiert auf dem Server bereits.',
+  badLanguage: 'Ungültige Sprache.',
+};
+const errorText = (code, serverMessage) => (!EN && code && ERRORS_DE[code]) || serverMessage;
 const DICT = {
   'Anmelden': 'Sign in', 'Registrieren': 'Create profile', 'Benutzername': 'Username', 'Passwort': 'Password',
   'Passwort wiederholen': 'Repeat password', 'Anzeigename (optional)': 'Display name (optional)',
@@ -68,6 +135,7 @@ const ICONS = {
   copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
   cert: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 8h10M7 11h6"/><circle cx="17" cy="17" r="3"/><path d="m15.5 19.5-1 2.5M18.5 19.5l1 2.5"/></svg>',
   back: '<svg viewBox="0 0 24 24"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>',
+  globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z"/></svg>',
   doc: '<svg viewBox="0 0 40 48"><path d="M6 2h20l12 12v30a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="var(--bg-elev)" stroke="var(--line)" stroke-width="1.5"/><path d="M26 2v10a2 2 0 0 0 2 2h10" fill="none" stroke="var(--line)" stroke-width="1.5"/></svg>',
 };
 
@@ -112,11 +180,11 @@ const fmtSize = b => {
   if (b < 1024) return b + ' B';
   const u = ['KB', 'MB', 'GB', 'TB']; let i = -1;
   do { b /= 1024; i++; } while (b >= 1024 && i < u.length - 1);
-  return b.toLocaleString(undefined, { maximumFractionDigits: b < 10 ? 1 : 0 }) + ' ' + u[i];
+  return b.toLocaleString(LOCALE(), { maximumFractionDigits: b < 10 ? 1 : 0 }) + ' ' + u[i];
 };
-const fmtDate = d => d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '–';
-const fmtDateTime = d => d ? new Date(d).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–';
-const monthKey = d => new Date(d).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+const fmtDate = d => d ? new Date(d).toLocaleDateString(LOCALE(), { day: 'numeric', month: 'short', year: 'numeric' }) : '–';
+const fmtDateTime = d => d ? new Date(d).toLocaleString(LOCALE(), { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–';
+const monthKey = d => new Date(d).toLocaleDateString(LOCALE(), { month: 'long', year: 'numeric' });
 const initials = n => (n || '?').split(/[\s._-]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('');
 const enc = encodeURIComponent;
 const joinPath = (dir, name) => (dir === '/' ? '' : dir) + '/' + name;
@@ -143,7 +211,7 @@ async function api(method, url, body) {
   let data = null;
   try { data = await res.json(); } catch { /* leer */ }
   if (!res.ok) {
-    const err = new ApiError(res.status, data && data.code, t((data && data.error) || ('HTTP ' + res.status)));
+    const err = new ApiError(res.status, data && data.code, errorText(data && data.code, (data && data.error) || ('HTTP ' + res.status)));
     if (res.status === 401 && err.code === 'unauthorized' && S.user) { S.user = null; render(); }
     if (res.status === 403 && err.code === 'mustChangeAccountPassword' && S.user) { S.user.mustChangePassword = true; render(); }
     throw err;
@@ -308,6 +376,7 @@ function renderAuth() {
           S.info = await api('GET', '/info');
         }
         S.user = res.user;
+        await applyProfileLanguage();
         go('#/');
       } catch (ex) { err.textContent = ex.message; }
       finally { submit.disabled = false; }
@@ -334,7 +403,11 @@ function renderAuth() {
     h('div', { class: 'auth-foot' },
       EN ? 'Certificate warning? ' : 'Zertifikatswarnung? ',
       h('a', { href: '/ca.crt' }, t('Zertifikat herunterladen')),
-      h('div', { class: 'mono', style: { marginTop: '6px' } }, fpShort(info.fingerprint))))));
+      h('div', { class: 'mono', style: { marginTop: '6px' } }, fpShort(info.fingerprint)),
+      h('div', { style: { marginTop: '10px' } },
+        h('a', { href: '#', onclick: e => { e.preventDefault(); setLanguage('de'); }, style: { fontWeight: EN ? 400 : 700 } }, 'Deutsch'),
+        ' · ',
+        h('a', { href: '#', onclick: e => { e.preventDefault(); setLanguage('en'); }, style: { fontWeight: EN ? 700 : 400 } }, 'English'))))));
   setTimeout(() => form.querySelector('input')?.focus(), 30);
 }
 const fpShort = fp => (fp || '').slice(0, 32).replace(/(.{4})/g, '$1 ').trim();
@@ -360,6 +433,7 @@ function renderAccountPasswordRequired() {
     submit: async v => {
       checkNewPassword(v.pw, v.pw2);
       S.user = await api('POST', '/auth/password', { oldPassword: v.old, newPassword: v.pw });
+      await applyProfileLanguage();
       toast(t('Gespeichert.'));
       render();
     },
@@ -404,6 +478,7 @@ function topbar() {
         menu(e.currentTarget, [
           { icon: 'key', label: t('Passwort ändern'), action: changeAccountPassword },
           u.isAdmin ? { icon: 'shield', label: t('Admin'), action: () => go('#/admin') } : null,
+          { icon: 'globe', label: EN ? 'Sprache: Deutsch' : 'Language: English', action: () => setLanguage(EN ? 'de' : 'en') },
           { icon: 'cert', label: t('Zertifikat herunterladen'), action: () => { location.href = '/ca.crt'; } },
           { icon: 'logout', label: t('Abmelden'), action: logout, danger: true },
         ], [h('div', { style: { fontWeight: 600 } }, u.displayName), h('div', { class: 'small muted' }, '@' + u.username + ' · ' + S.info.name)]);
@@ -923,7 +998,7 @@ function uploadOne({ f, dir, file, bar, state }) {
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) return resolve();
       let msg = 'HTTP ' + xhr.status;
-      try { msg = t(JSON.parse(xhr.responseText).error) || msg; } catch { }
+      try { const e = JSON.parse(xhr.responseText); msg = errorText(e.code, e.error) || msg; } catch { }
       reject(new Error(msg));
     };
     xhr.onerror = () => reject(new Error(t('Server nicht erreichbar.')));
@@ -1119,7 +1194,7 @@ async function adminServer(body) {
     h('div', { class: 'kv', style: { marginTop: '22px' } },
       h('div', {}, t('Version')), h('div', {}, S.info.version),
       h('div', {}, t('Fingerabdruck')), h('div', { class: 'mono' }, fpShort(S.info.fingerprint)),
-      h('div', {}, 'WebDAV'), h('div', { class: 'mono' }, location.origin + '/dav/<Ordner>/'),
+      h('div', {}, 'WebDAV'), h('div', { class: 'mono' }, location.origin + (EN ? '/dav/<folder>/' : '/dav/<Ordner>/')),
       h('div', {}, EN ? 'Certificate' : 'Zertifikat'), h('div', {}, h('a', { href: '/ca.crt' }, t('Zertifikat herunterladen'))))));
 }
 
@@ -1128,7 +1203,7 @@ async function boot() {
   try { S.info = await api('GET', '/info'); }
   catch (e) { mount(h('div', { class: 'empty' }, e.message)); return; }
   document.title = `${S.info.name} · NetworkFolderManager`;
-  try { S.user = await api('GET', '/auth/me'); } catch { S.user = null; }
+  try { S.user = await api('GET', '/auth/me'); await applyProfileLanguage(); } catch { S.user = null; }
   window.addEventListener('hashchange', render);
   render();
 }

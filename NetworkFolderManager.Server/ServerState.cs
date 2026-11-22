@@ -109,6 +109,7 @@ public sealed class ServerState
         MustChangePassword = u.MustChangePassword,
         CreatedAt = u.CreatedAt,
         LastLogin = u.LastLogin,
+        Language = u.Language,
         FolderCount = withFolderCount ? Folders.Read(db => db.Folders.Count(f => f.OwnerId == u.Id)) : 0
     };
 
@@ -133,7 +134,7 @@ public sealed class ServerState
         return Users.Update(db =>
         {
             if (db.Users.Any(u => string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase)))
-                throw new VaultException(409, "userExists", "Dieser Benutzername ist bereits vergeben.");
+                throw new VaultException(409, "userExists", "This username is already taken.");
             db.Users.Add(user);
             return user;
         });
@@ -144,9 +145,9 @@ public sealed class ServerState
     {
         var asAdmin = CheckSetupCode(req.SetupCode);
         if (!asAdmin && !string.IsNullOrWhiteSpace(req.SetupCode))
-            throw new VaultException(403, "badSetupCode", "Der Setup-Code ist falsch.");
+            throw new VaultException(403, "badSetupCode", "The setup code is wrong.");
         if (!asAdmin && !AllowRegistration)
-            throw new VaultException(403, "registrationClosed", "Auf diesem Server können keine neuen Profile angelegt werden. Bitte den Admin fragen.");
+            throw new VaultException(403, "registrationClosed", "New profiles cannot be created on this server. Please ask the admin.");
 
         var user = CreateUser(req.Username, req.Password, req.DisplayName, asAdmin, mustChange: false);
         if (asAdmin)
@@ -161,7 +162,7 @@ public sealed class ServerState
         var hash = Passwords.Hash(newPassword);
         Users.Update(db =>
         {
-            var u = db.Users.FirstOrDefault(x => x.Id == userId) ?? throw new VaultException(404, "notFound", "Benutzer nicht gefunden.");
+            var u = db.Users.FirstOrDefault(x => x.Id == userId) ?? throw new VaultException(404, "notFound", "User not found.");
             u.PasswordHash = hash;
             u.MustChangePassword = mustChange;
         });
@@ -171,9 +172,9 @@ public sealed class ServerState
     {
         Users.Update(db =>
         {
-            var u = db.Users.FirstOrDefault(x => x.Id == userId) ?? throw new VaultException(404, "notFound", "Benutzer nicht gefunden.");
+            var u = db.Users.FirstOrDefault(x => x.Id == userId) ?? throw new VaultException(404, "notFound", "User not found.");
             if (!isAdmin && u.IsAdmin && db.Users.Count(x => x.IsAdmin) == 1)
-                throw new VaultException(409, "lastAdmin", "Der letzte Admin kann nicht entfernt werden.");
+                throw new VaultException(409, "lastAdmin", "The last admin cannot be removed.");
             u.IsAdmin = isAdmin;
         });
     }
@@ -183,12 +184,23 @@ public sealed class ServerState
     {
         Users.Update(db =>
         {
-            var u = db.Users.FirstOrDefault(x => x.Id == userId) ?? throw new VaultException(404, "notFound", "Benutzer nicht gefunden.");
+            var u = db.Users.FirstOrDefault(x => x.Id == userId) ?? throw new VaultException(404, "notFound", "User not found.");
             if (u.IsAdmin && db.Users.Count(x => x.IsAdmin) == 1)
-                throw new VaultException(409, "lastAdmin", "Der letzte Admin kann nicht gelöscht werden.");
+                throw new VaultException(409, "lastAdmin", "The last admin cannot be deleted.");
             db.Users.Remove(u);
         });
         Sessions.RevokeUser(userId);
+    }
+
+    public void SetLanguage(string userId, string? language)
+    {
+        if (language is not (null or "de" or "en"))
+            throw new VaultException(400, "badLanguage", "Language must be \"de\" or \"en\".");
+        Users.Update(db =>
+        {
+            var u = db.Users.FirstOrDefault(x => x.Id == userId) ?? throw new VaultException(404, "notFound", "User not found.");
+            u.Language = language;
+        });
     }
 
     public void TouchLogin(string userId) =>
@@ -248,7 +260,7 @@ public sealed class ServerState
         Folders.Update(db =>
         {
             if (db.Folders.Any(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)))
-                throw new VaultException(409, "folderExists", "Ein Ordner mit diesem Namen existiert auf dem Server bereits.");
+                throw new VaultException(409, "folderExists", "A folder with this name already exists on this server.");
             db.Folders.Add(record);
         });
 
@@ -277,7 +289,7 @@ public sealed class ServerState
     {
         var removed = Folders.Update(db => db.Folders.RemoveAll(f => f.Id == folderId));
         if (removed == 0)
-            throw new VaultException(404, "notFound", "Ordner nicht gefunden.");
+            throw new VaultException(404, "notFound", "Folder not found.");
         Vaults.Close(folderId);
         var dir = Vaults.FolderDir(folderId);
         try
@@ -294,7 +306,7 @@ public sealed class ServerState
     public void SetFolderOwner(string folderId, string ownerId) =>
         Folders.Update(db =>
         {
-            var f = db.Folders.FirstOrDefault(x => x.Id == folderId) ?? throw new VaultException(404, "notFound", "Ordner nicht gefunden.");
+            var f = db.Folders.FirstOrDefault(x => x.Id == folderId) ?? throw new VaultException(404, "notFound", "Folder not found.");
             f.OwnerId = ownerId;
         });
 
@@ -305,18 +317,18 @@ public sealed class ServerState
     public VaultFolder Unlock(FolderRecord f, string password, string limiterKey)
     {
         if (Limiter.IsBlocked(limiterKey, out var wait))
-            throw new VaultException(429, "tooManyAttempts", $"Zu viele Fehlversuche. Bitte in {Math.Ceiling(wait.TotalMinutes)} Minute(n) erneut versuchen.");
+            throw new VaultException(429, "tooManyAttempts", $"Too many failed attempts. Please try again in {Math.Ceiling(wait.TotalMinutes)} minute(s).");
 
         var key = VaultManager.UnwrapKey(f, password);
         if (key == null)
         {
             Limiter.Fail(limiterKey);
-            throw new VaultException(403, "wrongPassword", "Falsches Ordnerpasswort.");
+            throw new VaultException(403, "wrongPassword", "Wrong folder password.");
         }
         Limiter.Success(limiterKey);
 
         if (f.MustChangePassword)
-            throw new VaultException(409, "mustChangePassword", "Dieser Ordner wurde für dich angelegt. Bitte lege beim ersten Öffnen ein eigenes Passwort fest.");
+            throw new VaultException(409, "mustChangePassword", "This folder was created for you. Please set your own password when opening it for the first time.");
         return Vaults.Open(f, key);
     }
 
@@ -329,15 +341,15 @@ public sealed class ServerState
         if (Passwords.Validate(newPassword) is { } pwError)
             throw new VaultException(400, "weakPassword", pwError);
         if (oldPassword == newPassword)
-            throw new VaultException(400, "samePassword", "Das neue Passwort muss sich vom bisherigen unterscheiden.");
+            throw new VaultException(400, "samePassword", "The new password must be different from the current one.");
         if (Limiter.IsBlocked(limiterKey, out var wait))
-            throw new VaultException(429, "tooManyAttempts", $"Zu viele Fehlversuche. Bitte in {Math.Ceiling(wait.TotalMinutes)} Minute(n) erneut versuchen.");
+            throw new VaultException(429, "tooManyAttempts", $"Too many failed attempts. Please try again in {Math.Ceiling(wait.TotalMinutes)} minute(s).");
 
         var key = VaultManager.UnwrapKey(f, oldPassword);
         if (key == null)
         {
             Limiter.Fail(limiterKey);
-            throw new VaultException(403, "wrongPassword", "Das bisherige Ordnerpasswort ist falsch.");
+            throw new VaultException(403, "wrongCurrentPassword", "The current folder password is wrong.");
         }
         Limiter.Success(limiterKey);
 

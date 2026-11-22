@@ -2,32 +2,32 @@ using System.Text;
 
 namespace NetworkFolderManager.Server;
 
-/// <summary>Kommandozeilen-Befehle (Konten verwalten, Infos) – funktionieren auch, während der Server läuft.</summary>
+/// <summary>Command line (manage accounts, show info) – works while the server is running.</summary>
 public static class Cli
 {
     public const string Usage = """
         NetworkFolderManager Server (nfm-server)
 
-        Aufruf:
-          nfm-server [run] [--data <Ordner>] [--port <Port>]   Server starten (Standard)
-          nfm-server info                                     Adresse, Fingerabdruck, Datenordner, Setup-Code
-          nfm-server admin add <Benutzer>                     Admin-Konto anlegen (fragt nach dem Passwort)
-          nfm-server admin grant <Benutzer>                   Bestehendes Konto zum Admin machen
-          nfm-server admin revoke <Benutzer>                  Admin-Rechte entziehen
-          nfm-server user list                                Alle Konten anzeigen
-          nfm-server user passwd <Benutzer>                   Passwort zurücksetzen (muss bei Anmeldung geändert werden)
-          nfm-server user delete <Benutzer>                   Konto löschen (Ordner bleiben erhalten)
-          nfm-server folder list                              Alle Ordner anzeigen
-          nfm-server set name <Name>                          Servernamen ändern
-          nfm-server set registration on|off                  Selbst-Registrierung erlauben/verbieten
-          nfm-server set port <Port>                          HTTPS-Port ändern (Neustart nötig)
-          nfm-server set storage <Ordner>                     Ablageort der Ordner (nur bei leerem Server!)
+        Usage:
+          nfm-server [run] [--data <dir>] [--port <port>]   Start the server (default)
+          nfm-server info                                   Address, fingerprint, data directory, setup code
+          nfm-server admin add <user>                       Create an admin account (asks for the password)
+          nfm-server admin grant <user>                     Make an existing account an admin
+          nfm-server admin revoke <user>                    Remove admin rights
+          nfm-server user list                              List all accounts
+          nfm-server user passwd <user>                     Reset a password (must be changed at the next sign-in)
+          nfm-server user delete <user>                     Delete an account (its folders are kept)
+          nfm-server folder list                            List all folders
+          nfm-server set name <name>                        Change the server name
+          nfm-server set registration on|off                Allow/forbid self-registration
+          nfm-server set port <port>                        Change the HTTPS port (restart required)
+          nfm-server set storage <dir>                      Folder storage location (only while the server has no folders!)
 
-        Optionen:
-          --data <Ordner>        Datenordner (Standard: siehe "info"; auch über NFM_SERVER_DATA)
-          --password-stdin       Passwort aus der Standardeingabe lesen (für Skripte)
+        Options:
+          --data <dir>           Data directory (default: see "info"; also via NFM_SERVER_DATA)
+          --password-stdin       Read the password from standard input (for scripts)
 
-        Ordnerinhalte sind mit dem jeweiligen Ordnerpasswort verschlüsselt – auch Admins können sie nicht lesen.
+        Folder contents are encrypted with the respective folder password – not even admins can read them.
         """;
 
     public static int Run(string[] args, string? dataDir)
@@ -43,15 +43,15 @@ public static class Cli
             {
                 case ["info"]:
                     state.InitCertificates(null);
-                    Console.WriteLine($"Server:        {state.ServerName} (Version {ServerState.Version})");
-                    Console.WriteLine($"Adresse:       https://<IP-Adresse>:{state.Port}/");
-                    Console.WriteLine($"Datenordner:   {paths.DataDir}");
-                    Console.WriteLine($"Ordnerablage:  {state.StorageRoot}");
-                    Console.WriteLine($"Fingerabdruck: {state.Certificates.FingerprintShort}");
-                    Console.WriteLine($"Registrierung: {(state.AllowRegistration ? "erlaubt" : "nur durch Admin")}");
-                    Console.WriteLine($"Konten:        {state.Users.Read(db => db.Users.Count)} · Ordner: {state.Folders.Read(db => db.Folders.Count)}");
+                    Console.WriteLine($"Server:        {state.ServerName} (version {ServerState.Version})");
+                    Console.WriteLine($"Address:       https://<ip-address>:{state.Port}/");
+                    Console.WriteLine($"Data:          {paths.DataDir}");
+                    Console.WriteLine($"Storage:       {state.StorageRoot}");
+                    Console.WriteLine($"Fingerprint:   {state.Certificates.FingerprintShort}");
+                    Console.WriteLine($"Registration:  {(state.AllowRegistration ? "open" : "admins only")}");
+                    Console.WriteLine($"Accounts:      {state.Users.Read(db => db.Users.Count)} · folders: {state.Folders.Read(db => db.Folders.Count)}");
                     if (state.EnsureSetupCode() is { } code)
-                        Console.WriteLine($"Setup-Code:    {code}   (noch kein Admin – beim Registrieren angeben)");
+                        Console.WriteLine($"Setup code:    {code}   (no admin yet – enter it when registering)");
                     return 0;
 
                 case ["admin", "add", var name]:
@@ -59,24 +59,24 @@ public static class Cli
                     var pw = ReadNewPassword(passwordStdin);
                     var user = state.CreateUser(name, pw, null, isAdmin: true, mustChange: false);
                     state.EnsureSetupCode();
-                    Console.WriteLine($"Admin-Konto „{user.Username}“ angelegt.");
+                    Console.WriteLine($"Admin account \"{user.Username}\" created.");
                     return 0;
                 }
 
                 case ["admin", "grant", var name]:
                     state.SetAdmin(RequireUser(state, name).Id, true);
                     state.EnsureSetupCode();
-                    Console.WriteLine($"„{name}“ ist jetzt Admin.");
+                    Console.WriteLine($"\"{name}\" is now an admin.");
                     return 0;
 
                 case ["admin", "revoke", var name]:
                     state.SetAdmin(RequireUser(state, name).Id, false);
-                    Console.WriteLine($"„{name}“ ist kein Admin mehr.");
+                    Console.WriteLine($"\"{name}\" is no longer an admin.");
                     return 0;
 
                 case ["user", "list"]:
                     foreach (var u in state.Users.Read(db => db.Users.ToList()).OrderBy(u => u.Username))
-                        Console.WriteLine($"{u.Username,-32} {(u.IsAdmin ? "Admin" : "     ")}  angelegt {u.CreatedAt:yyyy-MM-dd}  letzte Anmeldung {u.LastLogin?.ToString("yyyy-MM-dd HH:mm") ?? "–"}");
+                        Console.WriteLine($"{u.Username,-32} {(u.IsAdmin ? "admin" : "     ")}  created {u.CreatedAt:yyyy-MM-dd}  last sign-in {u.LastLogin?.ToString("yyyy-MM-dd HH:mm") ?? "–"}");
                     return 0;
 
                 case ["user", "passwd", var name]:
@@ -85,43 +85,43 @@ public static class Cli
                     var pw = ReadNewPassword(passwordStdin);
                     state.SetUserPassword(user.Id, pw, mustChange: true);
                     state.Sessions.RevokeUser(user.Id);
-                    Console.WriteLine($"Passwort von „{user.Username}“ zurückgesetzt (muss bei der nächsten Anmeldung geändert werden).");
+                    Console.WriteLine($"Password of \"{user.Username}\" reset (must be changed at the next sign-in).");
                     return 0;
                 }
 
                 case ["user", "delete", var name]:
                     state.DeleteUser(RequireUser(state, name).Id);
-                    Console.WriteLine($"Konto „{name}“ gelöscht.");
+                    Console.WriteLine($"Account \"{name}\" deleted.");
                     return 0;
 
                 case ["folder", "list"]:
                     foreach (var f in state.Folders.Read(db => db.Folders.ToList()).OrderBy(f => f.Name))
-                        Console.WriteLine($"{f.Name,-40} Besitzer: {state.FindUser(f.OwnerId)?.Username ?? "–",-20} {(f.MustChangePassword ? "(noch nicht geöffnet)" : "")}");
+                        Console.WriteLine($"{f.Name,-40} owner: {state.FindUser(f.OwnerId)?.Username ?? "–",-20} {(f.MustChangePassword ? "(not opened yet)" : "")}");
                     return 0;
 
                 case ["set", "name", var value]:
                     state.Config.Update(c => c.Name = value.Trim());
-                    Console.WriteLine("Servername gespeichert.");
+                    Console.WriteLine("Server name saved.");
                     return 0;
 
                 case ["set", "registration", var value]:
-                    state.Config.Update(c => c.AllowRegistration = value is "on" or "an" or "true" or "1");
-                    Console.WriteLine($"Selbst-Registrierung: {(state.AllowRegistration ? "erlaubt" : "aus")}.");
+                    state.Config.Update(c => c.AllowRegistration = value is "on" or "true" or "1" or "yes");
+                    Console.WriteLine($"Self-registration: {(state.AllowRegistration ? "on" : "off")}.");
                     return 0;
 
                 case ["set", "port", var value] when int.TryParse(value, out var port) && port is > 0 and < 65536:
                     state.Config.Update(c => c.Port = port);
-                    Console.WriteLine("Port gespeichert – bitte den Server neu starten.");
+                    Console.WriteLine("Port saved – please restart the server.");
                     return 0;
 
                 case ["set", "storage", var value]:
                     if (state.Folders.Read(db => db.Folders.Count) > 0)
                     {
-                        Console.Error.WriteLine("Es gibt bereits Ordner. Bitte den Server stoppen und den Ordner selbst verschieben.");
+                        Console.Error.WriteLine("There are already folders. Please stop the server and move the storage directory yourself.");
                         return 1;
                     }
                     state.Config.Update(c => c.StoragePath = Path.GetFullPath(value));
-                    Console.WriteLine("Ablageort gespeichert – bitte den Server neu starten.");
+                    Console.WriteLine("Storage location saved – please restart the server.");
                     return 0;
 
                 default:
@@ -131,13 +131,13 @@ public static class Cli
         }
         catch (VaultException ex)
         {
-            Console.Error.WriteLine("Fehler: " + ex.Message);
+            Console.Error.WriteLine("Error: " + ex.Message);
             return 1;
         }
     }
 
     private static UserRecord RequireUser(ServerState s, string name) =>
-        s.FindUser(name) ?? throw new VaultException(404, "noUser", $"Konto „{name}“ gibt es nicht.");
+        s.FindUser(name) ?? throw new VaultException(404, "noUser", $"Account \"{name}\" does not exist.");
 
     private static string ReadNewPassword(bool fromStdin)
     {
@@ -146,15 +146,15 @@ public static class Cli
 
         while (true)
         {
-            var pw = ReadHidden("Passwort: ");
+            var pw = ReadHidden("Password: ");
             if (Passwords.Validate(pw) is { } error)
             {
                 Console.WriteLine(error);
                 continue;
             }
-            if (ReadHidden("Passwort wiederholen: ") != pw)
+            if (ReadHidden("Repeat password: ") != pw)
             {
-                Console.WriteLine("Die Passwörter stimmen nicht überein.");
+                Console.WriteLine("The passwords do not match.");
                 continue;
             }
             return pw;

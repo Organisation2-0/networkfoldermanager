@@ -67,12 +67,12 @@ WebUi.Map(app, state);
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
-    log.LogInformation("NetworkFolderManager Server {Version} „{Name}“ läuft auf https://<IP-Adresse>:{Port}/",
+    log.LogInformation("NetworkFolderManager Server {Version} \"{Name}\" is running at https://<ip-address>:{Port}/",
         ServerState.Version, state.ServerName, state.Port);
-    log.LogInformation("Datenordner: {Dir}", paths.DataDir);
-    log.LogInformation("Zertifikat-Fingerabdruck: {Fp}", state.Certificates.FingerprintShort);
+    log.LogInformation("Data directory: {Dir}", paths.DataDir);
+    log.LogInformation("Certificate fingerprint: {Fp}", state.Certificates.FingerprintShort);
     if (state.EnsureSetupCode() is { } code)
-        log.LogWarning("Noch kein Admin! Erstes Konto mit Setup-Code {Code} registrieren (oder: nfm-server admin add <Name>).", code);
+        log.LogWarning("No admin yet! Register the first account with setup code {Code} (or run: nfm-server admin add <name>).", code);
 });
 
 app.Run();
@@ -97,7 +97,7 @@ internal sealed class MaintenanceService(ServerState state, ILogger<MaintenanceS
             }
             catch (Exception ex)
             {
-                log.LogWarning(ex, "Wartung fehlgeschlagen");
+                log.LogWarning(ex, "Maintenance failed");
             }
         }
     }

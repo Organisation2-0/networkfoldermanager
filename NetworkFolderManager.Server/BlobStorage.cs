@@ -128,7 +128,7 @@ public sealed class BlobReadStream : Stream
         if (!BlobFormat.HasValidHeader(_fs, out _prefix))
         {
             _fs.Dispose();
-            throw new InvalidDataException("Ungültige verschlüsselte Datei.");
+            throw new InvalidDataException("Invalid encrypted file.");
         }
         _gcm = new AesGcm(key, BlobFormat.TagSize);
         _length = length;

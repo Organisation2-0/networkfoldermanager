@@ -60,7 +60,7 @@ public sealed class CertificateManager
             var names = CurrentNames();
             if (names.Key == _leafNames && _leaf.NotAfter > DateTime.Now.AddDays(30))
                 return;
-            _log?.LogInformation("Serverzertifikat wird neu ausgestellt ({Names}).", names.Key);
+            _log?.LogInformation("Issuing a new server certificate ({Names}).", names.Key);
             _leaf = CreateLeaf(names);
         }
     }

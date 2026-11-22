@@ -8,12 +8,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>nfm-server</AssemblyName>
     <RootNamespace>NetworkFolderManager.Server</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Company>noobnet.eu</Company>
     <Authors>noobnet.eu</Authors>
     <Copyright>© 2026 noobnet.eu</Copyright>
     <Product>NetworkFolderManager Server</Product>
-    <Description>NetworkFolderManager-Server: verschlüsselte, passwortgeschützte Netzwerkordner</Description>
+    <Description>NetworkFolderManager Server: encrypted, password-protected network folders</Description>
     <InvariantGlobalization>true</InvariantGlobalization>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <!-- ASP0016: Fehlalarm für die inneren Lambdas in Api.cs – Api.Run schreibt das Ergebnis selbst (ExecuteAsync) -->

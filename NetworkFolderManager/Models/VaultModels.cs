@@ -89,6 +89,13 @@ public class UserDto
     public DateTime CreatedAt { get; set; }
     public DateTime? LastLogin { get; set; }
     public int FolderCount { get; set; }
+    /// <summary>Bevorzugte Sprache des Profils ("de"/"en", null = nicht festgelegt) – gilt auf allen Geräten.</summary>
+    public string? Language { get; set; }
+}
+
+public class LanguageRequest
+{
+    public string? Language { get; set; }
 }
 
 public class AuthResponse

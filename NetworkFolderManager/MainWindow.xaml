@@ -914,7 +914,11 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                             <Button Content="Deutsch" Style="{StaticResource GlassButton}" Command="{Binding SetLanguageGermanCommand}"/>
                                             <Button Content="English" Style="{StaticResource GlassButton}" Command="{Binding SetLanguageEnglishCommand}"/>
+                                            <Button Content="{loc:Tr 'Jetzt neu starten'}" Style="{StaticResource LinkButton}" Margin="12,0,0,0"
+                                                    VerticalAlignment="Center" Command="{Binding RestartAppCommand}"/>
                                         </StackPanel>
+                                        <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0"
+                                                   Text="{loc:Tr 'Die Sprache wird auch in deinen Server-Profilen gespeichert und gilt dann auf allen Geräten.'}"/>
                                         <TextBlock Style="{StaticResource DimText}" Text="{Binding LanguageStatus}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </ContentControl>

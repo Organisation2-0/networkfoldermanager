@@ -170,7 +170,7 @@ public static class WebDav
         }
         ctx.Response.StatusCode = 200;
         ctx.Response.ContentType = "text/plain; charset=utf-8";
-        await ctx.Response.WriteAsync("NetworkFolderManager WebDAV: /dav/<Ordnername>/");
+        await ctx.Response.WriteAsync("NetworkFolderManager WebDAV: /dav/<folder-name>/");
     }
 
     private static string Href(FolderRecord record, string path, bool dir)

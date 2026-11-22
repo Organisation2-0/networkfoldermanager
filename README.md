@@ -113,7 +113,7 @@ A small headless service that runs on any device in the network (Linux server, R
 
 ```sh
 # Linux (systemd)
-unzip nfm-server-1.1.0-linux-x64.zip -d nfm && cd nfm
+unzip nfm-server-1.1.1-linux-x64.zip -d nfm && cd nfm
 sudo sh install-linux.sh            # service + "nfm" account + firewall (ufw/firewalld)
 sudo nfm-server admin add julian    # create the admin account
 ```
@@ -126,6 +126,8 @@ CLI: `nfm-server info` · `admin add|grant|revoke <name>` · `user list|passwd|d
 - **Windows app:** tab **Server** → the server is found automatically (or enter its IP) → *Sign in* / *Create profile* → *New folder* / double-click to open (iCloud-style window with Photos, Files, viewer, drag & drop). **Connect as network drive** sets up WebDAV (one UAC prompt per server: trust the certificate, allow files up to 4 GB).
 - **Admin:** when an admin profile is signed in, the **Admin** tab appears in the main navigation.
 - **macOS, iPhone, Linux:** open `https://<server-ip>:45830` in a browser (Safari: *File → Add to Dock*). Network drive in Finder: install the certificate (`/ca.crt`, *Always Trust*), then *Go → Connect to Server* (⌘K) → `https://<server-ip>:45830/dav/<folder>/`, name = folder name, password = folder password.
+
+**Language:** the server itself (CLI, log, install scripts) is entirely in English. The web app and the Windows app can be switched between German and English; the choice is stored in the profile and applies on every device after signing in (Windows app: after a restart).
 
 > A forgotten folder password cannot be reset by anyone – not even the admin. The folder can only be deleted.
 

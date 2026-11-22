@@ -57,13 +57,13 @@ public static class Api
             var req = await Body<LoginRequest>(ctx);
             var limiterKey = "login:" + ClientIp(ctx);
             if (s.Limiter.IsBlocked(limiterKey, out var wait))
-                throw new VaultException(429, "tooManyAttempts", $"Zu viele Fehlversuche. Bitte in {Math.Ceiling(wait.TotalMinutes)} Minute(n) erneut versuchen.");
+                throw new VaultException(429, "tooManyAttempts", $"Too many failed attempts. Please try again in {Math.Ceiling(wait.TotalMinutes)} minute(s).");
 
             var user = s.FindUser(req.Username?.Trim());
             if (user == null || user.Id == req.Username || !Passwords.Verify(req.Password ?? "", user.PasswordHash))
             {
                 s.Limiter.Fail(limiterKey);
-                throw new VaultException(401, "badLogin", "Benutzername oder Passwort ist falsch.");
+                throw new VaultException(401, "badLogin", "Wrong username or password.");
             }
             s.Limiter.Success(limiterKey);
             return SignIn(ctx, s, user, req.Device);
@@ -82,11 +82,19 @@ public static class Api
         {
             var req = await Body<ChangePasswordRequest>(ctx);
             if (!Passwords.Verify(req.OldPassword ?? "", user.PasswordHash))
-                throw new VaultException(403, "wrongPassword", "Das bisherige Passwort ist falsch.");
+                throw new VaultException(403, "wrongCurrentPassword", "The current password is wrong.");
             if (req.OldPassword == req.NewPassword)
-                throw new VaultException(400, "samePassword", "Das neue Passwort muss sich vom bisherigen unterscheiden.");
+                throw new VaultException(400, "samePassword", "The new password must be different from the current one.");
             s.SetUserPassword(user.Id, req.NewPassword, mustChange: false);
             s.Sessions.RevokeUser(user.Id, exceptToken: SessionToken(ctx));
+            return Results.Json(s.ToDto(s.FindUser(user.Id)!));
+        }, allowMustChange: true));
+
+        // Preferred UI language of the profile (used by the web app and the Windows app on every device)
+        api.MapPut("/auth/language", (HttpContext ctx) => Run(ctx, s, async user =>
+        {
+            var req = await Body<LanguageRequest>(ctx);
+            s.SetLanguage(user.Id, string.IsNullOrWhiteSpace(req.Language) ? null : req.Language.Trim().ToLowerInvariant());
             return Results.Json(s.ToDto(s.FindUser(user.Id)!));
         }, allowMustChange: true));
 
@@ -109,22 +117,22 @@ public static class Api
 
         api.MapDelete("/folders/{id}", (HttpContext ctx, string id) => Run(ctx, s, async user =>
         {
-            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Ordner nicht gefunden.");
+            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Folder not found.");
             if (f.OwnerId != user.Id)
-                throw new VaultException(403, "notOwner", "Nur der Besitzer kann den Ordner löschen.");
+                throw new VaultException(403, "notOwner", "Only the owner can delete this folder.");
             var req = await Body<PasswordRequest>(ctx);
             if (VaultManager.UnwrapKey(f, req.Password ?? "") == null)
-                throw new VaultException(403, "wrongPassword", "Falsches Ordnerpasswort.");
+                throw new VaultException(403, "wrongPassword", "Wrong folder password.");
             s.DeleteFolder(f.Id);
             return Results.NoContent();
         }));
 
         api.MapPost("/folders/{id}/unlock", (HttpContext ctx, string id) => Run(ctx, s, async user =>
         {
-            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Ordner nicht gefunden.");
+            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Folder not found.");
             var req = await Body<PasswordRequest>(ctx);
             if (f.MustChangePassword && f.OwnerId != user.Id)
-                throw new VaultException(403, "notOwner", "Dieser Ordner muss zuerst von seinem Besitzer geöffnet werden.");
+                throw new VaultException(403, "ownerMustOpenFirst", "This folder must be opened by its owner first.");
             s.Unlock(f, req.Password ?? "", $"folder:{f.Id}:{ClientIp(ctx)}");
             var token = s.Vaults.IssueToken(f, user.Id);
             SetFolderCookie(ctx, f.Id, token);
@@ -146,9 +154,9 @@ public static class Api
 
         api.MapPost("/folders/{id}/password", (HttpContext ctx, string id) => Run(ctx, s, async user =>
         {
-            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Ordner nicht gefunden.");
+            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Folder not found.");
             if (f.OwnerId != user.Id)
-                throw new VaultException(403, "notOwner", "Nur der Besitzer kann das Ordnerpasswort ändern.");
+                throw new VaultException(403, "notOwner", "Only the owner can change the folder password.");
             var req = await Body<ChangePasswordRequest>(ctx);
             f = s.ChangeFolderPassword(f, req.OldPassword ?? "", req.NewPassword ?? "", $"folder:{f.Id}:{ClientIp(ctx)}");
 
@@ -203,7 +211,7 @@ public static class Api
                 var p = VaultFolder.Normalize(path);
                 var entry = folder.Get(p) ?? throw VaultException.NotFound(p);
                 if (entry.Dir)
-                    throw new VaultException(400, "isDir", "Das ist ein Ordner.");
+                    throw new VaultException(400, "isDir", "This is a folder.");
                 return Task.FromResult(FileResult(ctx, folder, entry, download == 1));
             }));
 
@@ -258,7 +266,7 @@ public static class Api
         admin.MapPost("/folders", (HttpContext ctx) => Run(ctx, s, async user =>
         {
             var req = await Body<CreateFolderRequest>(ctx);
-            var owner = s.FindUser(req.Owner?.Trim()) ?? throw new VaultException(404, "noUser", "Diesen Benutzer gibt es nicht.");
+            var owner = s.FindUser(req.Owner?.Trim()) ?? throw new VaultException(404, "noUser", "This user does not exist.");
             var folder = s.CreateFolder(req.Name, req.Password, owner, user, byAdminForOther: owner.Id != user.Id);
             return Results.Json(s.ToDto(folder, user.Id, admin: true), statusCode: 201);
         }, adminOnly: true));
@@ -272,7 +280,7 @@ public static class Api
         admin.MapPost("/folders/{id}/owner", (HttpContext ctx, string id) => Run(ctx, s, async user =>
         {
             var req = await Body<SetOwnerRequest>(ctx);
-            var owner = s.FindUser(req.Username?.Trim()) ?? throw new VaultException(404, "noUser", "Diesen Benutzer gibt es nicht.");
+            var owner = s.FindUser(req.Username?.Trim()) ?? throw new VaultException(404, "noUser", "This user does not exist.");
             s.SetFolderOwner(id, owner.Id);
             return Results.Json(s.ToDto(s.FindFolder(id)!, user.Id, admin: true));
         }, adminOnly: true));
@@ -292,7 +300,7 @@ public static class Api
         admin.MapDelete("/users/{id}", (HttpContext ctx, string id) => Run(ctx, s, user =>
         {
             if (id == user.Id)
-                throw new VaultException(409, "self", "Du kannst dein eigenes Konto hier nicht löschen.");
+                throw new VaultException(409, "cannotDeleteSelf", "You cannot delete your own account here.");
             s.DeleteUser(id);
             return Task.FromResult(Results.NoContent());
         }, adminOnly: true));
@@ -320,7 +328,7 @@ public static class Api
             var req = await Body<ServerSettingsDto>(ctx);
             var name = (req.Name ?? "").Trim();
             if (name.Length is 0 or > 64)
-                throw new VaultException(400, "badName", "Bitte einen Servernamen (1–64 Zeichen) angeben.");
+                throw new VaultException(400, "badServerName", "Please enter a server name (1–64 characters).");
             s.Config.Update(c =>
             {
                 c.Name = name;
@@ -329,7 +337,7 @@ public static class Api
             return Results.Json(new ServerSettingsDto { Name = s.ServerName, AllowRegistration = s.AllowRegistration });
         }, adminOnly: true));
 
-        api.MapFallback((HttpContext ctx) => Results.Json(new ErrorDto { Error = "Unbekannte API-Adresse.", Code = "notFound" }, statusCode: 404));
+        api.MapFallback((HttpContext ctx) => Results.Json(new ErrorDto { Error = "Unknown API endpoint.", Code = "notFound" }, statusCode: 404));
     }
 
     #region Hilfen
@@ -350,19 +358,19 @@ public static class Api
             // CSRF-Schutz: ändernde Aufrufe nur mit eigenem Header (Browser senden ihn nie von fremden Seiten)
             if (!HttpMethods.IsGet(ctx.Request.Method) && !HttpMethods.IsHead(ctx.Request.Method) &&
                 !ctx.Request.Headers.ContainsKey(VaultProtocol.ClientHeader))
-                throw new VaultException(403, "csrf", "Anfrage abgelehnt (fehlender Header).");
+                throw new VaultException(403, "csrf", "Request rejected (missing header).");
 
             UserRecord user = null!;
             if (requireAccount || adminOnly)
             {
                 var userId = s.Sessions.Validate(SessionToken(ctx));
-                user = s.FindUser(userId) ?? throw new VaultException(401, "unauthorized", "Bitte anmelden.");
+                user = s.FindUser(userId) ?? throw new VaultException(401, "unauthorized", "Please sign in.");
                 if (user.Id != userId)
-                    throw new VaultException(401, "unauthorized", "Bitte anmelden.");
+                    throw new VaultException(401, "unauthorized", "Please sign in.");
                 if (user.MustChangePassword && !allowMustChange)
-                    throw new VaultException(403, "mustChangeAccountPassword", "Bitte zuerst ein eigenes Passwort für dein Profil festlegen.");
+                    throw new VaultException(403, "mustChangeAccountPassword", "Please set your own profile password first.");
                 if (adminOnly && !user.IsAdmin)
-                    throw new VaultException(403, "notAdmin", "Nur für Admins.");
+                    throw new VaultException(403, "notAdmin", "Admins only.");
             }
             return await action(user);
         }
@@ -374,7 +382,7 @@ public static class Api
         }
         catch (JsonException)
         {
-            return Results.Json(new ErrorDto { Error = "Ungültige Anfrage.", Code = "badRequest" }, statusCode: 400);
+            return Results.Json(new ErrorDto { Error = "Invalid request.", Code = "badRequest" }, statusCode: 400);
         }
         catch (OperationCanceledException) when (ctx.RequestAborted.IsCancellationRequested)
         {
@@ -382,17 +390,17 @@ public static class Api
         }
         catch (IOException ex)
         {
-            ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Api").LogWarning(ex, "E/A-Fehler");
-            return Results.Json(new ErrorDto { Error = "Speicherfehler auf dem Server: " + ex.Message, Code = "io" }, statusCode: 500);
+            ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Api").LogWarning(ex, "I/O error");
+            return Results.Json(new ErrorDto { Error = "Storage error on the server: " + ex.Message, Code = "io" }, statusCode: 500);
         }
     }
 
     private static Task RunFolder(HttpContext ctx, ServerState s, string id, Func<UserRecord, VaultFolder, Task<IResult>> action) =>
         Run(ctx, s, async user =>
         {
-            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Ordner nicht gefunden.");
+            var f = s.FindFolder(id) ?? throw new VaultException(404, "notFound", "Folder not found.");
             var folder = s.Vaults.Resolve(FolderToken(ctx), f, user.Id)
-                         ?? throw new VaultException(401, "folderLocked", "Der Ordner ist gesperrt. Bitte erneut das Ordnerpasswort eingeben.");
+                         ?? throw new VaultException(401, "folderLocked", "The folder is locked. Please enter the folder password again.");
             return await action(user, folder);
         });
 
@@ -446,7 +454,7 @@ public static class Api
     private static async Task<T> Body<T>(HttpContext ctx) where T : new()
     {
         if (ctx.Request.ContentLength is > 64 * 1024)
-            throw new VaultException(413, "tooLarge", "Anfrage zu groß.");
+            throw new VaultException(413, "tooLarge", "Request too large.");
         return await JsonSerializer.DeserializeAsync<T>(ctx.Request.Body, JsonOptions, ctx.RequestAborted) ?? new T();
     }
 

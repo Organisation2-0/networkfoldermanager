@@ -48,7 +48,7 @@ public sealed class DiscoveryService : BackgroundService
     {
         if (!_state.DiscoveryEnabled)
         {
-            _log.LogInformation("Server-Erkennung ist ausgeschaltet.");
+            _log.LogInformation("Server discovery is disabled.");
             return;
         }
 
@@ -62,7 +62,7 @@ public sealed class DiscoveryService : BackgroundService
         }
         catch (Exception ex)
         {
-            _log.LogWarning("Server-Erkennung (UDP {Port}) nicht verfügbar: {Message}", VaultProtocol.DiscoveryPort, ex.Message);
+            _log.LogWarning("Server discovery (UDP {Port}) not available: {Message}", VaultProtocol.DiscoveryPort, ex.Message);
             return;
         }
 
@@ -91,7 +91,7 @@ public sealed class DiscoveryService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _log.LogDebug(ex, "Discovery-Paket ignoriert");
+                    _log.LogDebug(ex, "Discovery packet ignored");
                 }
             }
         }
@@ -132,7 +132,7 @@ public sealed class DiscoveryService : BackgroundService
             }
             catch (Exception ex)
             {
-                _log.LogDebug(ex, "Announce fehlgeschlagen");
+                _log.LogDebug(ex, "Announce failed");
             }
 
             try

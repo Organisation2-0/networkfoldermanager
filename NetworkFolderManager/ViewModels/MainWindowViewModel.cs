@@ -311,6 +311,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private string _languageStatus = Loc.T("Aktuelle Sprache: {0}. Eine Änderung wirkt nach einem Neustart des Programms.", Loc.IsEnglish ? "English" : "Deutsch");
 
     [RelayCommand]
+    private void RestartApp() => App.Restart();
+
+    [RelayCommand]
     private void SetLanguageGerman() => ChangeLanguage("de");
 
     [RelayCommand]
@@ -319,6 +322,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void ChangeLanguage(string language)
     {
         Loc.SavedLanguage = language;
+        // Auch in den angemeldeten Server-Profilen speichern (gilt dann auf allen Geräten)
+        _ = Servers.SyncLanguageAsync(language);
         LanguageStatus = language == Loc.Language
             ? Loc.T("Aktuelle Sprache: {0}. Eine Änderung wirkt nach einem Neustart des Programms.", Loc.IsEnglish ? "English" : "Deutsch")
             : Loc.T("Sprache gespeichert. Bitte das Programm neu starten (Infobereich → Beenden, dann erneut öffnen).");

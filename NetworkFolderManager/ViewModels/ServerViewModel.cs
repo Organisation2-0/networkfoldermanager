@@ -179,6 +179,60 @@ public partial class ServerViewModel : ObservableObject, IDisposable
         _searchTimer.Start();
     }
 
+    #region Sprache (im Profil gespeichert, geräteübergreifend)
+
+    private bool _languageEventRaised;
+
+    /// <summary>
+    /// Die Sprache aus dem Profil weicht von der laufenden Programmsprache ab (Parameter: "de"/"en").
+    /// Sie ist bereits gespeichert und wirkt nach einem Neustart.
+    /// </summary>
+    public event EventHandler<string>? ProfileLanguageApplied;
+
+    /// <summary>Gewählte Sprache in allen angemeldeten Profilen speichern.</summary>
+    public async Task SyncLanguageAsync(string language)
+    {
+        foreach (var s in Servers.Where(s => s.IsLoggedIn && s.User?.Language != language).ToList())
+        {
+            try
+            {
+                s.User = await s.Client!.SetLanguageAsync(language);
+            }
+            catch (Exception ex)
+            {
+                LogService.Info($"Sprache für {s.Name} nicht gespeichert: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Nach der Anmeldung: Hat das Profil eine Sprache, wird sie übernommen (auch für alle anderen Server);
+    /// sonst wird die aktuelle Programmsprache ins Profil geschrieben.
+    /// </summary>
+    private async Task ApplyProfileLanguageAsync(ServerEntry entry)
+    {
+        if (entry.User is not { MustChangePassword: false } user)
+            return;
+
+        if (user.Language is not ("de" or "en"))
+        {
+            await SyncLanguageAsync(Loc.SavedLanguage is "de" or "en" ? Loc.SavedLanguage : Loc.Language);
+            return;
+        }
+
+        if (Loc.SavedLanguage != user.Language)
+            Loc.SavedLanguage = user.Language;
+        await SyncLanguageAsync(user.Language);
+
+        if (user.Language != Loc.Language && !_languageEventRaised)
+        {
+            _languageEventRaised = true;
+            ProfileLanguageApplied?.Invoke(this, user.Language);
+        }
+    }
+
+    #endregion
+
     private async Task RestoreLoginAsync(ServerEntry entry)
     {
         try
@@ -186,6 +240,7 @@ public partial class ServerViewModel : ObservableObject, IDisposable
             entry.User = await entry.Client!.MeAsync();
             entry.IsOnline = true;
             entry.StatusText = string.Empty;
+            await ApplyProfileLanguageAsync(entry);
         }
         catch (VaultApiException ex) when (ex.Status == 401)
         {
@@ -484,6 +539,7 @@ public partial class ServerViewModel : ObservableObject, IDisposable
             LogService.Error("TokenStore", ex);
         }
         Status = Loc.T("Angemeldet bei {0} als {1}.", entry.Name, entry.User!.DisplayName);
+        await ApplyProfileLanguageAsync(entry);
         UpdateAdminServers();
         RefreshCommands();
         await LoadFoldersAsync();
