@@ -1,0 +1,27 @@
+[Unit]
+Description=NetworkFolderManager Server (verschluesselte Netzwerkordner)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=nfm
+Group=nfm
+Environment=NFM_SERVER_DATA=/var/lib/nfm-server
+Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR=/var/lib/nfm-server/.net
+ExecStart=/opt/nfm-server/nfm-server
+Restart=on-failure
+RestartSec=5
+
+# Haertung
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/nfm-server
+
+[Install]
+WantedBy=multi-user.target

@@ -10,7 +10,7 @@
     <ApplicationIcon>appicon.ico</ApplicationIcon>
     <AssemblyName>NetworkFolderManager</AssemblyName>
     <RootNamespace>NetworkFolderManager</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Company>noobnet.eu</Company>
     <Authors>noobnet.eu</Authors>
     <Copyright>© 2026 noobnet.eu</Copyright>
@@ -21,12 +21,15 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Programm-Icon: EXE (ApplicationIcon oben) und Fenster/Titelleiste (Resource) -->
     <Resource Include="appicon.ico" />
+    <!-- Oberfläche des Anruf-Fensters (WebRTC in WebView2), eingebettet damit sie auch in der Einzeldatei-EXE steckt -->
+    <EmbeddedResource Include="Assets\call.html" LogicalName="call.html" />
   </ItemGroup>
 
 </Project>

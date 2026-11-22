@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NetworkFolderManager.Models;
 using NetworkFolderManager.Services;
@@ -50,6 +50,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         Chat = new ChatViewModel(_settings, () => _machineConfig);
         Chat.PeerShareDiscovered += OnPeerShareDiscovered;
+        Calls = new CallService(Chat, _settings);
+        Servers = new ServerViewModel(_settings);
 
         foreach (var path in _settings.ManualFolders)
         {
@@ -71,6 +73,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<NetworkFolder> NetworkFolders { get; } = new();
 
     public ChatViewModel Chat { get; }
+
+    /// <summary>Kamera-/Bildschirm-Anrufe und Klingelton.</summary>
+    public CallService Calls { get; }
+
+    /// <summary>NFM-Server: Profile, verschlüsselte Server-Ordner und Admin-Bereich.</summary>
+    public ServerViewModel Servers { get; }
 
     /// <summary>Zuletzt empfangene Dateien im eigenen Ordner.</summary>
     public ObservableCollection<NewFileEventArgs> ReceivedFiles { get; } = new();
@@ -351,6 +359,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         Chat.Start();
         StartUpdateTimer();
+        _ = Servers.StartAsync();
         AddOwnShareToList();
 
         await RefreshConnectionStatesAsync();
@@ -1062,6 +1071,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _uploadCts?.Cancel();
+        Servers.Dispose();
+        Calls.Dispose();
         Chat.Dispose();
         _folderMonitor.Dispose();
         _fileTransferService.Dispose();

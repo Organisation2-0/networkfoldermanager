@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>NetworkFolderManager</string>
+    <key>CFBundleDisplayName</key><string>NetworkFolderManager</string>
+    <key>CFBundleIdentifier</key><string>eu.noobnet.networkfoldermanager</string>
+    <key>CFBundleExecutable</key><string>NetworkFolderManager</string>
+    <key>CFBundleIconFile</key><string>appicon</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+    <key>CFBundleVersion</key><string>@VERSION@</string>
+    <key>LSMinimumSystemVersion</key><string>12.0</string>
+    <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSHumanReadableCopyright</key><string>© 2026 noobnet.eu</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>NetworkFolderManager sucht andere Nutzer im lokalen Netzwerk für den Chat und verbindet Netzwerkordner. / NetworkFolderManager looks for other users on the local network for chat and connects network folders.</string>
+</dict>
+</plist>

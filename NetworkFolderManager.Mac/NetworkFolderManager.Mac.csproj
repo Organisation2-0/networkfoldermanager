@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- macOS-Version (Avalonia). Teilt Chat-/Erkennungs-/Übersetzungscode mit der Windows-App (Links unten). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>NetworkFolderManager</AssemblyName>
+    <RootNamespace>NetworkFolderManager</RootNamespace>
+    <Version>1.1.0</Version>
+    <Company>noobnet.eu</Company>
+    <Authors>noobnet.eu</Authors>
+    <Copyright>© 2026 noobnet.eu</Copyright>
+    <Product>NetworkFolderManager</Product>
+    <Description>Netzwerkordner verwalten und im lokalen Netzwerk chatten</Description>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.*" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+  </ItemGroup>
+
+  <!-- Gemeinsamer Code aus dem Windows-Projekt -->
+  <PropertyGroup>
+    <Core>..\NetworkFolderManager\</Core>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(Core)Models\ChatModels.cs" Link="Shared\Models\ChatModels.cs" />
+    <Compile Include="$(Core)Models\NetworkFolder.cs" Link="Shared\Models\NetworkFolder.cs" />
+    <Compile Include="$(Core)Models\MachineConfig.cs" Link="Shared\Models\MachineConfig.cs" />
+    <Compile Include="$(Core)Models\VaultModels.cs" Link="Shared\Models\VaultModels.cs" />
+    <Compile Include="$(Core)Services\ChatService.cs" Link="Shared\Services\ChatService.cs" />
+    <Compile Include="$(Core)Services\ChatStore.cs" Link="Shared\Services\ChatStore.cs" />
+    <Compile Include="$(Core)Services\PeerDiscoveryService.cs" Link="Shared\Services\PeerDiscoveryService.cs" />
+    <Compile Include="$(Core)Services\CertificateService.cs" Link="Shared\Services\CertificateService.cs" />
+    <Compile Include="$(Core)Services\SettingsService.cs" Link="Shared\Services\SettingsService.cs" />
+    <Compile Include="$(Core)Services\FolderMonitorService.cs" Link="Shared\Services\FolderMonitorService.cs" />
+    <Compile Include="$(Core)Services\FileTransferService.cs" Link="Shared\Services\FileTransferService.cs" />
+    <Compile Include="$(Core)Services\LogService.cs" Link="Shared\Services\LogService.cs" />
+    <Compile Include="$(Core)Services\Loc.cs" Link="Shared\Services\Loc.cs" />
+    <Compile Include="$(Core)Services\Loc.Strings.cs" Link="Shared\Services\Loc.Strings.cs" />
+    <Compile Include="$(Core)Services\Platform.cs" Link="Shared\Services\Platform.cs" />
+    <Compile Include="$(Core)ViewModels\ChatViewModel.cs" Link="Shared\ViewModels\ChatViewModel.cs" />
+  </ItemGroup>
+
+</Project>

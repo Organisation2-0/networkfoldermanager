@@ -1,6 +1,6 @@
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System.Globalization;
-using System.Windows.Markup;
+using System.IO;
 
 namespace NetworkFolderManager.Services;
 
@@ -22,15 +22,16 @@ public static partial class Loc
 
     public static bool IsEnglish => Language == "en";
 
-    /// <summary>Gespeicherte Sprachwahl (null = automatisch nach Windows-Sprache).</summary>
+    /// <summary>Gespeicherte Sprachwahl (null = automatisch nach Systemsprache).</summary>
     public static string? SavedLanguage
     {
         get
         {
             try
             {
-                using var key = Registry.CurrentUser.OpenSubKey(RegKey);
-                return key?.GetValue("Language") as string;
+                if (!OperatingSystem.IsWindows())
+                    return File.Exists(LanguageFile) ? File.ReadAllText(LanguageFile).Trim() : null;
+                return ReadRegistry();
             }
             catch
             {
@@ -41,17 +42,45 @@ public static partial class Loc
         {
             try
             {
-                using var key = Registry.CurrentUser.CreateSubKey(RegKey);
-                if (value is "de" or "en")
-                    key.SetValue("Language", value);
-                else
-                    key.DeleteValue("Language", false);
+                if (!OperatingSystem.IsWindows())
+                {
+                    if (value is "de" or "en")
+                    {
+                        Directory.CreateDirectory(SettingsService.SettingsDir);
+                        File.WriteAllText(LanguageFile, value);
+                    }
+                    else if (File.Exists(LanguageFile))
+                    {
+                        File.Delete(LanguageFile);
+                    }
+                    return;
+                }
+                WriteRegistry(value);
             }
             catch (Exception ex)
             {
                 LogService.Error("Loc/Setting", ex);
             }
         }
+    }
+
+    private static string LanguageFile => Path.Combine(SettingsService.SettingsDir, "language.txt");
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static string? ReadRegistry()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(RegKey);
+        return key?.GetValue("Language") as string;
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void WriteRegistry(string? value)
+    {
+        using var key = Registry.CurrentUser.CreateSubKey(RegKey);
+        if (value is "de" or "en")
+            key.SetValue("Language", value);
+        else
+            key.DeleteValue("Language", false);
     }
 
     private static string ReadLanguage()
@@ -62,22 +91,15 @@ public static partial class Loc
         return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("de", StringComparison.OrdinalIgnoreCase) ? "de" : "en";
     }
 
+    /// <summary>Zusätzliche Übersetzungen (z.B. der macOS-App); haben Vorrang vor <see cref="Strings"/>.</summary>
+    public static Dictionary<string, string> Extra { get; } = new();
+
     /// <summary>Übersetzt einen deutschen Text; mit <paramref name="args"/> wird er wie string.Format ({0}, {1}, ...) gefüllt.</summary>
     public static string T(string german, params object?[] args)
     {
-        var text = IsEnglish && Strings.TryGetValue(german, out var english) ? english : german;
+        var text = german;
+        if (IsEnglish && (Extra.TryGetValue(german, out var english) || Strings.TryGetValue(german, out english)))
+            text = english;
         return args.Length == 0 ? text : string.Format(text, args);
     }
-}
-
-/// <summary>XAML: <c>Text="{loc:Tr 'Deutscher Text'}"</c></summary>
-[MarkupExtensionReturnType(typeof(string))]
-public class TrExtension : MarkupExtension
-{
-    public TrExtension() { }
-    public TrExtension(string text) => Text = text;
-
-    public string Text { get; set; } = string.Empty;
-
-    public override object ProvideValue(IServiceProvider serviceProvider) => Loc.T(Text);
 }

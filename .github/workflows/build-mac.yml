@@ -1,0 +1,90 @@
+name: Build macOS app
+
+# Baut NetworkFolderManager.app für Apple Silicon (arm64) und Intel (x64) auf einem macOS-Runner,
+# signiert ad-hoc (nötig, damit arm64-Programme überhaupt starten) und packt eine ZIP.
+#
+# Manuell starten:  Actions -> "Build macOS app" -> Run workflow
+#   Optional "tag" angeben (z.B. v1.0.0): die ZIPs werden dann an dieses GitHub-Release angehängt.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release-Tag, an das die ZIPs angehängt werden (leer = nur als Artefakt)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            suffix: arm64
+          - rid: osx-x64
+            suffix: x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Version lesen
+        id: ver
+        run: |
+          VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' NetworkFolderManager.Mac/NetworkFolderManager.Mac.csproj | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        run: >
+          dotnet publish NetworkFolderManager.Mac/NetworkFolderManager.Mac.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained true -o publish -p:DebugType=none
+
+      - name: App-Bundle erstellen und signieren
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          APP=NetworkFolderManager.app
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp -R publish/. "$APP/Contents/MacOS/"
+          sed "s/@VERSION@/$VERSION/g" NetworkFolderManager.Mac/Packaging/Info.plist.template > "$APP/Contents/Info.plist"
+
+          # Icon (.icns) aus dem PNG erzeugen
+          SRC=NetworkFolderManager.Mac/Assets/appicon.png
+          mkdir icon.iconset
+          for s in 16 32 128 256; do
+            sips -z $s $s "$SRC" --out "icon.iconset/icon_${s}x${s}.png" >/dev/null
+          done
+          cp icon.iconset/icon_32x32.png   icon.iconset/icon_16x16@2x.png
+          cp icon.iconset/icon_256x256.png icon.iconset/icon_128x128@2x.png
+          iconutil -c icns icon.iconset -o "$APP/Contents/Resources/appicon.icns"
+
+          chmod +x "$APP/Contents/MacOS/NetworkFolderManager"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+
+          ZIP="NetworkFolderManager-$VERSION-mac-${{ matrix.suffix }}.zip"
+          ditto -c -k --keepParent "$APP" "$ZIP"
+          shasum -a 256 "$ZIP" | sed 's/ \*/  /' > "${ZIP%.zip}.sha256"
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NetworkFolderManager-mac-${{ matrix.suffix }}
+          path: |
+            NetworkFolderManager-*-mac-${{ matrix.suffix }}.zip
+            NetworkFolderManager-*-mac-${{ matrix.suffix }}.sha256
+
+      - name: An Release anhängen
+        if: ${{ github.event.inputs.tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release upload "${{ github.event.inputs.tag }}"
+          "$ZIP" "${ZIP%.zip}.sha256" --clobber --repo "${{ github.repository }}"

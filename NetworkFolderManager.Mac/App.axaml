@@ -1,0 +1,95 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NetworkFolderManager.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <Color x:Key="AccentColor">#00D4FF</Color>
+        <SolidColorBrush x:Key="Accent" Color="#00D4FF"/>
+        <SolidColorBrush x:Key="TextDim" Color="#9A9AA6"/>
+        <SolidColorBrush x:Key="Card" Color="#14FFFFFF"/>
+        <SolidColorBrush x:Key="CardBorder" Color="#22FFFFFF"/>
+        <SolidColorBrush x:Key="Danger" Color="#FF6B6B"/>
+        <SolidColorBrush x:Key="Success" Color="#4ADE80"/>
+        <SolidColorBrush x:Key="BubbleOut" Color="#0B5E73"/>
+        <SolidColorBrush x:Key="BubbleIn" Color="#2A2A33"/>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <Style Selector="Window">
+            <Setter Property="Background" Value="#0A0A0F"/>
+        </Style>
+
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{StaticResource Card}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+
+        <Style Selector="TextBlock.title">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="TextBlock.dim">
+            <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.headline">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#33E0FF"/>
+            <Setter Property="TextElement.Foreground" Value="Black"/>
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="TextElement.Foreground" Value="#7FE9FF"/>
+        </Style>
+
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="15"/>
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Margin" Value="0,2"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="CornerRadius" Value="10"/>
+        </Style>
+    </Application.Styles>
+
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="avares://NetworkFolderManager/Assets/appicon.png" ToolTipText="NetworkFolderManager">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="Open" Click="TrayOpen_Click"/>
+                        <NativeMenuItemSeparator/>
+                        <NativeMenuItem Header="Quit" Click="TrayQuit_Click"/>
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
+</Application>

@@ -339,6 +339,24 @@
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="{loc:Tr 'Verlauf löschen'}" Style="{StaticResource GlassButton}"
                                                     Padding="12,6" Command="{Binding DeleteChatCommand}"/>
+                                            <Button DockPanel.Dock="Right" Content="🔔" Style="{StaticResource GlassButton}" MinWidth="0" Padding="12,6"
+                                                    ToolTip="{loc:Tr 'Eigener Klingelton für diesen Kontakt (Rechtsklick: Standard wiederherstellen)'}"
+                                                    Command="{Binding DataContext.Calls.ChoosePeerRingtoneCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                <Button.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="{loc:Tr 'Klingelton wählen…'}"
+                                                                  Command="{Binding PlacementTarget.Command, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                        <MenuItem Header="{loc:Tr 'Standard-Klingelton verwenden'}"
+                                                                  Command="{Binding PlacementTarget.DataContext.Calls.ResetPeerRingtoneCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    </ContextMenu>
+                                                </Button.ContextMenu>
+                                            </Button>
+                                            <Button DockPanel.Dock="Right" Content="{loc:Tr '🖥 Bildschirm teilen'}" Style="{StaticResource GlassButton}" Padding="12,6"
+                                                    IsEnabled="{Binding SelectedPeer.IsOnline, FallbackValue=False}"
+                                                    Command="{Binding DataContext.Calls.StartCallCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="screen"/>
+                                            <Button DockPanel.Dock="Right" Content="{loc:Tr '📷 Videoanruf'}" Padding="12,6"
+                                                    IsEnabled="{Binding SelectedPeer.IsOnline, FallbackValue=False}"
+                                                    Command="{Binding DataContext.Calls.StartCallCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="camera"/>
                                             <Grid Width="40" Height="40" Margin="0,0,12,0">
                                                 <Ellipse Fill="{StaticResource AvatarBrush}"/>
                                                 <TextBlock Text="{Binding SelectedPeer.Initial}" Foreground="Black" FontWeight="Bold" FontSize="16"
@@ -522,6 +540,355 @@
                 </TabItem>
 
                 <!-- =========================================================
+                     TAB: SERVER (verschlüsselte Ordner auf NFM-Servern)
+                     ========================================================= -->
+                <TabItem x:Name="ServerTab" Header="{loc:Tr 'Server'}">
+                    <Grid DataContext="{Binding Servers}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="5*"/>
+                            <ColumnDefinition Width="7*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Serverliste -->
+                        <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,7,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'NFM-Server im Netzwerk'}"/>
+                                <WrapPanel Grid.Row="1" Margin="-4,0,-4,4">
+                                    <Button Content="{loc:Tr 'Netzwerk durchsuchen'}" Command="{Binding SearchCommand}"/>
+                                    <Button Content="{loc:Tr 'Im Browser öffnen'}" Style="{StaticResource GlassButton}" Command="{Binding OpenWebCommand}"/>
+                                    <Button Content="{loc:Tr 'Entfernen'}" Style="{StaticResource GlassButton}" Command="{Binding RemoveServerCommand}"/>
+                                </WrapPanel>
+                                <Grid Grid.Row="2" Margin="0,4,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding ManualAddress, UpdateSourceTrigger=PropertyChanged}">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Enter" Command="{Binding AddManualCommand}"/>
+                                        </TextBox.InputBindings>
+                                    </TextBox>
+                                    <TextBlock Text="{loc:Tr 'Adresse hinzufügen, z.B. 192.168.1.20'}" IsHitTestVisible="False" Margin="12,0"
+                                               VerticalAlignment="Center" Foreground="{StaticResource TextDim}"
+                                               Visibility="{Binding ManualAddress, Converter={StaticResource NotEmptyToVisibility}, ConverterParameter=invert}"/>
+                                    <Button Grid.Column="1" Content="+" MinWidth="0" Width="40" Padding="0" FontSize="18" Margin="6,0,0,0"
+                                            ToolTip="{loc:Tr 'Hinzufügen'}" Command="{Binding AddManualCommand}"/>
+                                </Grid>
+                                <ListBox Grid.Row="3" ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="36" Height="36" CornerRadius="10" Background="{StaticResource Glass}"
+                                                        BorderBrush="{StaticResource Border}" BorderThickness="1" Margin="0,0,12,0">
+                                                    <Grid>
+                                                        <TextBlock Text="&#xE968;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Ellipse x:Name="Dot" Width="10" Height="10" Fill="#555559" Stroke="Black" StrokeThickness="2"
+                                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"/>
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                        <Border Style="{StaticResource Badge}" Background="#2600D4FF"
+                                                                Visibility="{Binding IsAdmin, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="Admin" FontSize="10" Foreground="{StaticResource Accent}"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Style="{StaticResource DimText}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+                                                        <Run Text="{Binding Address, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding UserText, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#FFB4AE"
+                                                               Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVisibility}}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                                    <Setter TargetName="Dot" Property="Fill" Value="#30D158"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Grid.Row="4" Text="{Binding Status}" Style="{StaticResource DimText}" Margin="2,8,2,0"/>
+                            </Grid>
+                        </ContentControl>
+
+                        <!-- Ausgewählter Server -->
+                        <ContentControl Grid.Column="1" Style="{StaticResource GlassCard}" Margin="7,0,0,0">
+                            <Grid>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="440"
+                                            Visibility="{Binding HasSelectedServer, Converter={StaticResource NotEmptyToVisibility}, ConverterParameter=invert}">
+                                    <TextBlock Text="&#xE968;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="44" HorizontalAlignment="Center" Foreground="{StaticResource Accent}"/>
+                                    <TextBlock Text="{loc:Tr 'Verschlüsselte Ordner auf einem Server'}" Style="{StaticResource Headline}" HorizontalAlignment="Center" Margin="0,12,0,6"/>
+                                    <TextBlock Style="{StaticResource DimText}" TextAlignment="Center"
+                                               Text="{loc:Tr 'Auf einem PC oder Linux-Server läuft „nfm-server“. Dort kannst du mit deinem Profil eigene, passwortgeschützte Ordner anlegen – Fotos und Dateien werden mit dem Ordnerpasswort verschlüsselt gespeichert. Links einen Server auswählen.'}"/>
+                                </StackPanel>
+
+                                <Grid Visibility="{Binding HasSelectedServer, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SelectedServer.Name}" Style="{StaticResource Headline}"/>
+                                        <TextBlock Style="{StaticResource DimText}" Margin="0,2,0,0">
+                                            <Run Text="{Binding SelectedServer.Address, Mode=OneWay}"/><Run Text="{loc:Tr ' · Fingerabdruck '}"/><Run Text="{Binding SelectedServer.FingerprintShort, Mode=OneWay}" FontFamily="Consolas"/>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <!-- Anmeldung -->
+                                    <Border Grid.Row="1" Margin="0,14,0,10" Padding="14,12" CornerRadius="14" Background="{StaticResource Glass}" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                                        <Grid>
+                                            <DockPanel Visibility="{Binding SelectedServer.IsLoggedIn, Converter={StaticResource NotEmptyToVisibility}, ConverterParameter=invert}">
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                    <Button Content="{loc:Tr 'Anmelden'}" Command="{Binding LoginCommand}"/>
+                                                    <Button Content="{loc:Tr 'Profil anlegen'}" Style="{StaticResource GlassButton}" Command="{Binding RegisterCommand}"/>
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource DimText}" VerticalAlignment="Center" Margin="0,0,10,0"
+                                                           Text="{loc:Tr 'Mit deinem Profil anmelden – es liegt auf dem Server und funktioniert auf jedem Gerät.'}"/>
+                                            </DockPanel>
+                                            <DockPanel Visibility="{Binding SelectedServer.IsLoggedIn, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                    <Button Content="{loc:Tr 'Passwort ändern'}" Style="{StaticResource GlassButton}" Command="{Binding ChangeAccountPasswordCommand}"/>
+                                                    <Button Content="{loc:Tr 'Abmelden'}" Style="{StaticResource GlassButton}" Command="{Binding LogoutCommand}"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Ellipse Width="30" Height="30" Fill="{StaticResource AvatarBrush}" Margin="0,0,10,0"/>
+                                                    <TextBlock Text="{Binding SelectedServer.UserText}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Ordner -->
+                                    <Grid Grid.Row="2" Visibility="{Binding SelectedServer.IsLoggedIn, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <DockPanel>
+                                            <WrapPanel DockPanel.Dock="Right" Margin="0,0,-4,4">
+                                                <Button Content="{loc:Tr 'Neuer Ordner'}" Command="{Binding CreateFolderCommand}"/>
+                                                <Button Content="{loc:Tr 'Öffnen'}" Style="{StaticResource GlassButton}" Command="{Binding OpenFolderCommand}"/>
+                                                <Button Content="{loc:Tr 'Löschen'}" Style="{StaticResource GlassButton}" Command="{Binding DeleteFolderCommand}"/>
+                                                <Button Content="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Style="{StaticResource GlassButton}"
+                                                        Command="{Binding RefreshFoldersCommand}" ToolTip="{loc:Tr 'Aktualisieren'}" Padding="12,8"/>
+                                            </WrapPanel>
+                                            <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Ordner auf diesem Server'}" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <ListBox Grid.Row="1" x:Name="ServerFolderList" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}"
+                                                 MouseDoubleClick="ServerFolderList_MouseDoubleClick">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Width="36" Height="36" CornerRadius="10" Background="{StaticResource Glass}"
+                                                                BorderBrush="{StaticResource Border}" BorderThickness="1" Margin="0,0,12,0">
+                                                            <Grid>
+                                                                <TextBlock Text="&#xE8D5;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="17" Foreground="#5AC8FA"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="&#xE72E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="9"
+                                                                           HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,2"/>
+                                                            </Grid>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                                <Border Style="{StaticResource Badge}" Background="#2600D4FF"
+                                                                        Visibility="{Binding IsMine, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                    <TextBlock Text="{loc:Tr 'meiner'}" FontSize="10" Foreground="{StaticResource Accent}"/>
+                                                                </Border>
+                                                                <Border Style="{StaticResource Badge}" Background="#26FF9F0A"
+                                                                        Visibility="{Binding MustChangePassword, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                    <TextBlock Text="{loc:Tr 'neu – eigenes Passwort festlegen'}" FontSize="10" Foreground="#FFB340"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Subtitle}" Style="{StaticResource DimText}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+
+                                    <TextBlock Grid.Row="3" Style="{StaticResource DimText}" Margin="2,8,2,0">
+                                        <Run Text="{loc:Tr 'Mac, iPhone, Linux: im Browser öffnen →'}"/>
+                                        <Run Text="{Binding SelectedServer.WebUrl, Mode=OneWay}" Foreground="{StaticResource Accent}"/>
+                                    </TextBlock>
+                                </Grid>
+                            </Grid>
+                        </ContentControl>
+                    </Grid>
+                </TabItem>
+
+                <!-- =========================================================
+                     TAB: ADMIN (nur sichtbar, wenn ein Admin-Profil angemeldet ist)
+                     ========================================================= -->
+                <TabItem x:Name="AdminTab" Header="{loc:Tr 'Admin'}"
+                         Visibility="{Binding Servers.HasAdminAccess, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid DataContext="{Binding Servers}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14" Padding="16,12">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="&#xE83D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20" Foreground="{StaticResource Accent}"
+                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{loc:Tr 'Admin-Bereich'}" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <ComboBox ItemsSource="{Binding AdminServers}" SelectedItem="{Binding AdminServer}" Width="220">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <Button Content="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Style="{StaticResource GlassButton}" Padding="12,8"
+                                            Command="{Binding AdminRefreshCommand}" ToolTip="{loc:Tr 'Aktualisieren'}" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding AdminStatus}" Style="{StaticResource DimText}" VerticalAlignment="Center" Margin="16,0,0,0"
+                                           TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                            </DockPanel>
+                        </ContentControl>
+
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="6*"/>
+                                <ColumnDefinition Width="5*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Ordner -->
+                            <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,7,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Ordner'}"/>
+                                    <TextBlock Grid.Row="1" Style="{StaticResource DimText}" Margin="0,0,0,8"
+                                               Text="{loc:Tr 'Du kannst Ordner anlegen, zuweisen und löschen – aber nicht öffnen: Die Inhalte sind mit dem Ordnerpasswort verschlüsselt.'}"/>
+                                    <WrapPanel Grid.Row="2" Margin="-4,0,-4,6">
+                                        <Button Content="{loc:Tr 'Für Benutzer anlegen'}" Command="{Binding AdminCreateFolderCommand}"/>
+                                        <Button Content="{loc:Tr 'Besitzer ändern'}" Style="{StaticResource GlassButton}" Command="{Binding AdminChangeOwnerCommand}"/>
+                                        <Button Content="{loc:Tr 'Löschen'}" Style="{StaticResource GlassButton}" Command="{Binding AdminDeleteFolderCommand}"/>
+                                    </WrapPanel>
+                                    <ListBox Grid.Row="3" ItemsSource="{Binding AdminFolders}" SelectedItem="{Binding SelectedAdminFolder}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                            <Border x:Name="StatusBadge" Style="{StaticResource Badge}" Background="{StaticResource GlassStrong}">
+                                                                <TextBlock x:Name="StatusLabel" Text="{Binding StatusText}" FontSize="10" Foreground="{StaticResource TextDim}"/>
+                                                            </Border>
+                                                        </StackPanel>
+                                                        <TextBlock Style="{StaticResource DimText}">
+                                                            <Run Text="{loc:Tr 'Besitzer:'}"/> <Run Text="{Binding OwnerName, Mode=OneWay}" Foreground="{StaticResource Text}"/><Run Text=" · "/><Run Text="{Binding CreatedText, Mode=OneWay}"/>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding SizeText}" Style="{StaticResource DimText}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                                </Grid>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding Waiting}" Value="True">
+                                                        <Setter TargetName="StatusBadge" Property="Background" Value="#26FF9F0A"/>
+                                                        <Setter TargetName="StatusLabel" Property="Foreground" Value="#FFB340"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </ContentControl>
+
+                            <!-- Benutzer + Server -->
+                            <Grid Grid.Column="1" Margin="7,0,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Benutzer'}"/>
+                                        <WrapPanel Grid.Row="1" Margin="-4,0,-4,6">
+                                            <Button Content="{loc:Tr 'Anlegen'}" Command="{Binding AdminCreateUserCommand}"/>
+                                            <Button Content="{loc:Tr 'Passwort zurücksetzen'}" Style="{StaticResource GlassButton}" Command="{Binding AdminResetPasswordCommand}"/>
+                                            <Button Content="{loc:Tr 'Admin an/aus'}" Style="{StaticResource GlassButton}" Command="{Binding AdminToggleAdminCommand}"/>
+                                            <Button Content="{loc:Tr 'Löschen'}" Style="{StaticResource GlassButton}" Command="{Binding AdminDeleteUserCommand}"/>
+                                        </WrapPanel>
+                                        <ListBox Grid.Row="2" ItemsSource="{Binding AdminUsers}" SelectedItem="{Binding SelectedAdminUser}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Ellipse Width="30" Height="30" Fill="{StaticResource AvatarBrush}" Margin="0,0,10,0"/>
+                                                        <StackPanel Grid.Column="1">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                                                <TextBlock Text="{Binding Username}" Style="{StaticResource DimText}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            <TextBlock Style="{StaticResource DimText}">
+                                                                <Run Text="{Binding RoleText, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding FoldersText, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding LastLoginText, Mode=OneWay}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </ContentControl>
+
+                                <ContentControl Grid.Row="1" Style="{StaticResource GlassCard}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Server-Einstellungen'}"/>
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="{loc:Tr 'Speichern'}" Command="{Binding AdminSaveSettingsCommand}" Margin="8,0,0,0"/>
+                                            <TextBox Text="{Binding AdminServerName, UpdateSourceTrigger=PropertyChanged}" ToolTip="{loc:Tr 'Servername'}"/>
+                                        </DockPanel>
+                                        <CheckBox IsChecked="{Binding AdminAllowRegistration}" Margin="0,10,0,0"
+                                                  Content="{loc:Tr 'Jeder darf sich selbst ein Profil anlegen'}"/>
+                                    </StackPanel>
+                                </ContentControl>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+
+                <!-- =========================================================
                      TAB 3: EINSTELLUNGEN
                      ========================================================= -->
                 <TabItem Header="{loc:Tr 'Einstellungen'}">
@@ -580,6 +947,37 @@
                                                    Visibility="{Binding UpdateStatus, Converter={StaticResource NotEmptyToVisibility}}"/>
                                         <Button Content="{loc:Tr 'Versionshinweise auf GitHub'}" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
                                                 Margin="0,6,0,0" Command="{Binding OpenReleasesPageCommand}"/>
+                                    </StackPanel>
+                                </ContentControl>
+
+                                <ContentControl Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="{loc:Tr 'Anrufe – Klingelton'}"/>
+                                        <TextBlock Style="{StaticResource DimText}" Margin="0,0,0,6" TextWrapping="Wrap"
+                                                   Text="{loc:Tr 'Klingelton für eingehende Video- und Bildschirm-Anrufe (mp3, wav, wma, m4a, aac, flac). Pro Kontakt lässt er sich im Chat über 🔔 überschreiben.'}"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Text="{Binding Calls.RingtoneDisplay, Mode=OneWay}" IsReadOnly="True"
+                                                     ToolTip="{Binding Calls.RingtonePath}"/>
+                                            <Button Grid.Column="1" Content="…" MinWidth="0" Width="40" Padding="0" Margin="6,0,0,0"
+                                                    ToolTip="{loc:Tr 'Datei auswählen'}" Style="{StaticResource GlassButton}"
+                                                    Command="{Binding Calls.BrowseRingtoneCommand}"/>
+                                        </Grid>
+                                        <DockPanel Margin="0,10,0,0">
+                                            <TextBlock DockPanel.Dock="Left" Text="{loc:Tr 'Lautstärke'}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Calls.RingtoneVolume, StringFormat={}{0} %}" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="40"/>
+                                            <Slider Minimum="0" Maximum="100" SmallChange="5" LargeChange="10" VerticalAlignment="Center"
+                                                    Value="{Binding Calls.RingtoneVolume}"/>
+                                        </DockPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                            <Button Content="{loc:Tr 'Anhören / Stoppen'}" Style="{StaticResource LinkButton}" Margin="0,0,16,0"
+                                                    Command="{Binding Calls.TestRingtoneCommand}"/>
+                                            <Button Content="{loc:Tr 'Standard-Klingelton wiederherstellen'}" Style="{StaticResource LinkButton}"
+                                                    Command="{Binding Calls.ResetRingtoneCommand}"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </ContentControl>
 

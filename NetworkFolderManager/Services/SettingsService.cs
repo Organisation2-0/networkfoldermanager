@@ -41,6 +41,15 @@ public class AppSettings
 
     /// <summary>Benachrichtigungen bei neuen Chat-Nachrichten.</summary>
     public bool ChatNotifications { get; set; } = true;
+
+    /// <summary>Eigener Klingelton für eingehende Anrufe (Audiodatei; leer = eingebauter Klingelton).</summary>
+    public string RingtonePath { get; set; } = string.Empty;
+
+    /// <summary>Lautstärke des Klingeltons (0–100).</summary>
+    public int RingtoneVolume { get; set; } = 80;
+
+    /// <summary>Bekannte NFM-Server (Anmelde-Token liegen in der Anmeldeinformationsverwaltung, nicht hier).</summary>
+    public List<Models.SavedServer> Servers { get; set; } = new();
 }
 
 public static class SettingsService
@@ -50,8 +59,11 @@ public static class SettingsService
     /// </summary>
     public static readonly string Profile = SanitizeProfile(Environment.GetEnvironmentVariable("NFM_PROFILE"));
 
+    /// <summary>Windows: %APPDATA%\NetworkFolderManager, macOS: ~/Library/Application Support/NetworkFolderManager.</summary>
     public static readonly string SettingsDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        OperatingSystem.IsWindows()
+            ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support"),
         "NetworkFolderManager" + (Profile.Length > 0 ? "-" + Profile : ""));
 
     private static string SanitizeProfile(string? p) =>

@@ -6,8 +6,6 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Security.Authentication;
 using System.IO;
-using System.Windows.Media.Imaging;
-using Application = System.Windows.Application;
 
 namespace NetworkFolderManager.ViewModels;
 
@@ -27,7 +25,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     private readonly PeerDiscoveryService _discovery;
     private readonly ChatService _chat;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
-    private readonly System.Windows.Threading.DispatcherTimer _retryTimer;
+    private System.Threading.Timer? _retryTimer;
 
     public ChatViewModel(AppSettings settings, Func<MachineConfig?> machineConfig)
     {
@@ -54,6 +52,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             FromPort = _chat!.Port
         }, certificate, VerifySender);
         _chat.MessageReceived += OnMessageReceived;
+        _chat.SignalReceived += OnSignalReceived;
 
         _discovery = new PeerDiscoveryService(() =>
         {
@@ -71,10 +70,6 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         });
         _discovery.PeerSeen += (_, a) => Dispatch("PeerSeen", () => OnPeerSeen(a));
         _discovery.PeerLost += (_, id) => Dispatch("PeerLost", () => OnPeerLost(id));
-
-        // Wartende Nachrichten regelmäßig erneut zustellen (unabhängig von der Erkennung)
-        _retryTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
-        _retryTimer.Tick += (_, _) => RetryPendingAll();
     }
 
     #region Properties
@@ -122,16 +117,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     /// </summary>
     private void InitReceiveFolder()
     {
-        string? fromInstaller = null;
-        try
-        {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\noobnet.eu\NetworkFolderManager");
-            fromInstaller = key?.GetValue("ReceiveFolder") as string;
-        }
-        catch
-        {
-            // ignorieren
-        }
+        var fromInstaller = Platform.Current.GetInstallerReceiveFolder();
 
         if (SettingsService.Profile.Length == 0 && !string.IsNullOrWhiteSpace(fromInstaller) &&
             !string.Equals(fromInstaller, _settings.InstallerReceiveFolderApplied, StringComparison.OrdinalIgnoreCase))
@@ -148,16 +134,13 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void BrowseReceiveFolder()
+    private async Task BrowseReceiveFolderAsync()
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = Loc.T("Ordner für empfangene Bilder und Dateien wählen")
-        };
-        if (Directory.Exists(ReceiveFolder))
-            dialog.InitialDirectory = ReceiveFolder;
-        if (dialog.ShowDialog() == true)
-            ReceiveFolder = dialog.FolderName;
+        var folder = await Platform.Current.PickFolderAsync(
+            Loc.T("Ordner für empfangene Bilder und Dateien wählen"),
+            Directory.Exists(ReceiveFolder) ? ReceiveFolder : null);
+        if (!string.IsNullOrEmpty(folder))
+            ReceiveFolder = folder;
     }
 
     [RelayCommand]
@@ -190,7 +173,9 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         {
             _chat.Start();
             _discovery.Start();
-            _retryTimer.Start();
+            // Wartende Nachrichten regelmäßig erneut zustellen (unabhängig von der Erkennung)
+            _retryTimer = new System.Threading.Timer(_ => Dispatch("Retry", RetryPendingAll),
+                null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             NetworkStatus = Loc.T("Suche nach anderen Nutzern im Netzwerk... (Port {0})", _chat.Port);
         }
         catch (Exception ex)
@@ -346,16 +331,11 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     private bool HasPeer() => SelectedPeer != null;
 
     [RelayCommand(CanExecute = nameof(HasPeer))]
-    private void AttachFile()
+    private async Task AttachFileAsync()
     {
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = Loc.T("Bilder oder Dateien senden"),
-            Filter = Loc.T("Alle Dateien (*.*)|*.*|Bilder|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp"),
-            Multiselect = true
-        };
-        if (dialog.ShowDialog() == true)
-            SendFiles(dialog.FileNames);
+        var files = await Platform.Current.PickFilesAsync(Loc.T("Bilder oder Dateien senden"));
+        if (files.Count > 0)
+            SendFiles(files);
     }
 
     /// <summary>
@@ -391,36 +371,27 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Bild aus der Zwischenablage senden (Strg+V im Eingabefeld).
     /// </summary>
-    public bool TrySendClipboardImage()
+    public async Task<bool> TrySendClipboardImageAsync()
     {
         if (SelectedPeer == null)
             return false;
 
         try
         {
-            if (System.Windows.Clipboard.ContainsFileDropList())
+            var content = await Platform.Current.GetClipboardAsync();
+            if (content?.Files is { Count: > 0 } files)
             {
-                var files = System.Windows.Clipboard.GetFileDropList().Cast<string>().ToList();
                 SendFiles(files);
-                return files.Count > 0;
+                return true;
             }
 
-            if (!System.Windows.Clipboard.ContainsImage())
-                return false;
-
-            var image = System.Windows.Clipboard.GetImage();
-            if (image == null)
+            if (content?.ImagePng is not { Length: > 0 } png)
                 return false;
 
             var dir = Path.Combine(ChatService.ReceiveFolder, "Gesendet");
             Directory.CreateDirectory(dir);
             var path = ChatService.GetUniquePath(Path.Combine(dir, $"Bild_{DateTime.Now:yyyyMMdd_HHmmss}.png"));
-            using (var fs = File.Create(path))
-            {
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(image));
-                encoder.Save(fs);
-            }
+            await File.WriteAllBytesAsync(path, png);
             SendFiles(new[] { path });
             return true;
         }
@@ -448,7 +419,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         try
         {
             if (File.Exists(path))
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+                Platform.Current.OpenFile(path);
         }
         catch
         {
@@ -460,14 +431,14 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     private void ShowInFolder(ChatMessage? message)
     {
         if (message?.FilePath is { } path && File.Exists(path))
-            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+            Platform.Current.RevealInFileManager(path);
     }
 
     [RelayCommand]
     private void OpenReceiveFolder()
     {
         Directory.CreateDirectory(ChatService.ReceiveFolder);
-        System.Diagnostics.Process.Start("explorer.exe", ChatService.ReceiveFolder);
+        Platform.Current.OpenFolder(ChatService.ReceiveFolder);
     }
 
     /// <summary>
@@ -491,15 +462,15 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(HasPeer))]
-    private void DeleteChat()
+    private async Task DeleteChatAsync()
     {
         if (SelectedPeer is not { } peer)
             return;
 
-        var answer = System.Windows.MessageBox.Show(
+        var confirmed = await Platform.Current.ConfirmAsync(
             Loc.T("Chatverlauf mit {0} löschen? Empfangene Dateien bleiben erhalten.", peer.DisplayName),
-            Loc.T("Chat löschen"), System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
-        if (answer != System.Windows.MessageBoxResult.Yes)
+            Loc.T("Chat löschen"));
+        if (!confirmed)
             return;
 
         peer.Messages.Clear();
@@ -600,6 +571,46 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 
     #endregion
 
+    #region Anruf-Signale
+
+    /// <summary>Anruf-Signal eines Kontakts (auf dem UI-Thread). Parameter: Kontakt, JSON-Inhalt.</summary>
+    public event EventHandler<(Peer Peer, string Json)>? CallSignalReceived;
+
+    private void OnSignalReceived(object? sender, SignalReceivedEventArgs e)
+    {
+        Dispatch("SignalReceived", () =>
+        {
+            var env = e.Envelope;
+            var peer = Peers.FirstOrDefault(p => p.Id == env.From);
+            if (peer == null)
+            {
+                peer = new Peer { Id = env.From, DisplayName = env.FromName, MachineName = env.FromMachine, CertFingerprint = e.SenderFingerprint };
+                Peers.Add(peer);
+            }
+            if (!string.IsNullOrWhiteSpace(env.FromName))
+                peer.DisplayName = env.FromName;
+            peer.Address = e.SenderAddress;
+            if (env.FromPort > 0)
+                peer.Port = env.FromPort;
+            peer.IsOnline = true;
+            peer.LastSeen = DateTime.Now;
+            CallSignalReceived?.Invoke(this, (peer, env.Text));
+        });
+    }
+
+    /// <summary>Sendet ein Anruf-Signal an einen Kontakt (wirft, wenn nicht erreichbar).</summary>
+    public Task SendCallSignalAsync(Peer peer, string json, CancellationToken ct = default)
+    {
+        if (peer.KeyChanged)
+            throw new AuthenticationException(Loc.T("Sicherheitsprüfung fehlgeschlagen – der Schlüssel des Empfängers stimmt nicht."));
+        return _chat.SendSignalAsync(peer, json, ct);
+    }
+
+    /// <summary>Speichert Änderungen am Kontakt (z.B. Klingelton).</summary>
+    public void SavePeer(Peer peer) => ChatStore.Save(peer);
+
+    #endregion
+
     #region Empfangen
 
     private void OnMessageReceived(object? sender, ChatReceivedEventArgs e)
@@ -647,7 +658,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
                     MessageKind.File => $"📎 {e.Message.FileName}",
                     _ => e.Message.Text
                 };
-                NotificationService.ShowToastNotification(peer.DisplayName, Truncate(preview, 200), chatPeerId: peer.Id);
+                Platform.Current.Notify(peer.DisplayName, Truncate(preview, 200), peer.Id);
             }
 
             ChatStore.Save(peer);
@@ -693,10 +704,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     /// </summary>
     private static void Dispatch(string context, Action action)
     {
-        var app = Application.Current;
-        if (app == null)
-            return;
-        app.Dispatcher.BeginInvoke(() =>
+        Platform.Current.Post(() =>
         {
             try
             {
@@ -723,7 +731,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _retryTimer.Stop();
+        _retryTimer?.Dispose();
         _discovery.Dispose();
         _chat.Dispose();
     }

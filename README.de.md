@@ -2,9 +2,9 @@
 
 Deutsch · [English](README.md)
 
-Version 1.0.0 · Herausgeber: noobnet.eu · https://github.com/Organisation2-0
+Version 1.1.0 · Herausgeber: noobnet.eu · https://github.com/Organisation2-0
 
-Eine C#-WPF-Anwendung zum Verwalten von passwortgeschützten Netzwerkordnern – mit eigenem überwachten Netzwerkordner und einem Chat für alle im lokalen Netzwerk, die das Programm installiert haben. Design im Stil von noobnet.eu (Liquid Glass, dunkel, Akzent `#00d4ff`).
+Eine C#-Anwendung für **Windows** (WPF) und **macOS** (Avalonia) zum Verwalten von passwortgeschützten Netzwerkordnern – mit eigenem überwachten Netzwerkordner und einem Chat für alle im lokalen Netzwerk, die das Programm installiert haben. Design im Stil von noobnet.eu (Liquid Glass, dunkel, Akzent `#00d4ff`).
 
 ## Funktionen
 
@@ -28,6 +28,15 @@ Eine C#-WPF-Anwendung zum Verwalten von passwortgeschützten Netzwerkordnern –
 - Zustellhäkchen ✓✓, Warteschlange für Offline-Kontakte (wird zugestellt, sobald sie online sind), „Erneut senden“
 - Bilder per 📎, Drag & Drop oder **Strg+V** aus der Zwischenablage; Vorschau im Chat
 - Ungelesen-Zähler, Benachrichtigungen, Verlauf wird lokal gespeichert
+
+**Server-Ordner (NFM-Server)** – siehe [eigener Abschnitt](#nfm-server-verschlüsselte-server-ordner)
+- Geräte mit dem **NFM-Server** (`nfm-server`, ohne Oberfläche, Windows/Linux/macOS) werden im Netzwerk automatisch gefunden
+- **Profile** liegen auf dem Server – Anmeldung von jedem Gerät (Windows-App oder Browser)
+- Eigene, **passwortgeschützte Ordner** anlegen und öffnen; Inhalte werden mit dem Ordnerpasswort **verschlüsselt** gespeichert
+- Ordnerfenster im iCloud-Stil: **Fotos** (nach Monaten), **Dateien** (Symbole/Liste), Bildbetrachter, Drag & Drop
+- **Als Netzlaufwerk einbinden** (WebDAV) – unter Windows per Klick, unter macOS im Finder
+- **Admin-Bereich** (Tab *Admin*, nur für Admins sichtbar): Ordner löschen, Ordner für andere anlegen (Besitzer muss beim ersten Öffnen ein eigenes Passwort setzen), Benutzer verwalten – **Inhalte kann der Admin nicht sehen**
+- **macOS / iPhone / Linux:** Web-App direkt vom Server (`https://<Server>:45830`), im Safari „Zum Dock hinzufügen“
 
 **Allgemein**
 - Autostart mit Windows (im Infobereich), Weiterlaufen im Tray, nur eine Instanz
@@ -64,6 +73,84 @@ Bei der Deinstallation werden Freigabe, Zugangskonto und Firewall-Regel entfernt
 
 > **Hinweis:** Chat und Erkennung funktionieren nur in Netzwerken, die in Windows als **Privat** eingestuft sind.
 
+## macOS
+
+`NetworkFolderManager-<Version>-mac-arm64.zip` (Apple Silicon) bzw. `-mac-x64.zip` (Intel) von der [Releases-Seite](https://github.com/Organisation2-0/NetworkFolderManager/releases) laden, entpacken und `NetworkFolderManager.app` in den Ordner *Programme* ziehen.
+
+Die App ist nicht von Apple notarisiert: beim ersten Start **Rechtsklick → Öffnen**, oder einmalig im Terminal:
+
+```sh
+xattr -cr /Applications/NetworkFolderManager.app
+codesign --force --deep --sign - /Applications/NetworkFolderManager.app   # nur nötig, wenn die App auf Apple Silicon "beendet" wird
+```
+
+Danach den Zugriff auf das **lokale Netzwerk** erlauben, wenn macOS fragt (Systemeinstellungen → Datenschutz & Sicherheit → Lokales Netzwerk) – Chat und Erkennung brauchen das.
+
+| Funktion | macOS |
+|---|---|
+| Chat (Text, Bilder, Dateien, TLS, Sicherheitsnummern) | ✔ gleiches Protokoll wie unter Windows – Mac und PC können miteinander chatten |
+| Netzwerkordner | Freigaben anderer Nutzer erscheinen automatisch; `smb://Server/Freigabe` manuell hinzufügen. *Verbinden* bindet die Freigabe über macOS ein (macOS fragt Benutzername/Passwort ab und kann sie im Schlüsselbund merken), *Im Finder öffnen*, Upload per Drag & Drop |
+| Benachrichtigung bei neuen Dateien im eigenen Ordner | ✔ |
+| Eigene Freigabe | Über Systemeinstellungen → Allgemein → Teilen → Dateisharing (legt die App nicht an) |
+| Menüleistensymbol, Autostart, Deutsch/English | ✔ (Fenster schließen lässt den Chat weiterlaufen; Beenden über das Menüleistensymbol oder ⌘Q) |
+| Updates | Zeigt neue Versionen an; Download auf der Releases-Seite |
+
+Daten liegen in `~/Library/Application Support/NetworkFolderManager/` (Einstellungen, Chatverläufe, Zertifikat, `error.log`); empfangene Chat-Dateien in `~/Documents/NetworkFolderManager/`.
+
+Selbst bauen: `powershell -NoProfile -ExecutionPolicy Bypass -File build-mac.ps1` (unter Windows oder macOS; .NET 8 SDK und Python 3) – unsigniert, siehe Hinweis oben. Auf einem Mac geht auch `dotnet run --project NetworkFolderManager.Mac`. Der GitHub-Workflow *Build macOS app* baut, signiert ad-hoc und hängt die ZIPs auf Wunsch an ein Release.
+
+## NFM-Server: verschlüsselte Server-Ordner
+
+Ein kleiner Dienst ohne Oberfläche, der auf einem beliebigen Gerät im Netzwerk läuft (Linux-Server, Raspberry Pi, NAS mit Linux, Windows-PC, Mac). Er stellt bereit:
+
+| | |
+|---|---|
+| **Profile** | Benutzerkonten pro Server (Anmeldung von jedem Gerät). Selbst-Registrierung abschaltbar |
+| **Ordner** | Jeder Ordner hat ein eigenes Passwort. Wer es kennt, kann ihn öffnen |
+| **Verschlüsselung** | AES-256-GCM pro Datei, Inhaltsverzeichnis (auch Dateinamen) verschlüsselt. Schlüssel = aus dem Ordnerpasswort abgeleitet (PBKDF2, 310 000 Runden) – **weder Admin noch wer die Festplatte hat, kann die Daten lesen** |
+| **Admin** | Ordner anlegen (für andere), Besitzer ändern, löschen; Benutzer anlegen/löschen, Passwort zurücksetzen, Admin-Rechte. Ein vom Admin angelegter Ordner kann erst geöffnet werden, wenn der Besitzer ein eigenes Passwort gesetzt hat – dabei wird ein **neuer Schlüssel** erzeugt |
+| **Zugriff** | HTTPS-API (Windows-App), Web-App (Browser), WebDAV (Netzlaufwerk) – alles über Port **45830/TCP**; Erkennung über **45823/UDP** |
+| **TLS** | Eigene Zertifizierungsstelle pro Server, per *Name Constraints* auf lokale Namen/private IPs beschränkt (kann keine fremden Websites ausstellen). Die Windows-App prüft sie fest per Fingerabdruck |
+
+### Installation
+
+`build-server.ps1` erzeugt in `output\` je eine ZIP für `linux-x64`, `linux-arm64` (Raspberry Pi 64 Bit), `win-x64`, `osx-arm64`, `osx-x64` (eigenständig, keine .NET-Installation nötig).
+
+**Linux** (systemd):
+```sh
+unzip nfm-server-1.1.0-linux-x64.zip -d nfm && cd nfm
+sudo sh install-linux.sh            # Dienst + Konto "nfm" + Firewall (ufw/firewalld)
+sudo nfm-server admin add julian    # Admin-Konto anlegen (fragt nach dem Passwort)
+```
+Daten: `/var/lib/nfm-server` · Protokoll: `journalctl -u nfm-server`
+
+**Windows:** ZIP entpacken, als Administrator `install-windows.ps1` ausführen (Dienst *NFM-Server*, Firewall nur Privat/Domäne). Daten: `%ProgramData%\NFM-Server`.
+
+**macOS / zum Testen:** `./nfm-server` im Terminal starten (Daten: `~/Library/Application Support/NFM-Server`).
+
+**Erster Admin ohne Kommandozeile:** Solange es keinen Admin gibt, zeigt der Server einen **Setup-Code** im Protokoll (und bei `nfm-server info`). Wer sich mit diesem Code registriert (Web-App oder Windows-App), wird Admin.
+
+### Verwaltung per Kommandozeile
+
+| Befehl | Zweck |
+|---|---|
+| `nfm-server info` | Adresse, Fingerabdruck, Datenordner, Setup-Code |
+| `nfm-server admin add <Name>` / `admin grant <Name>` / `admin revoke <Name>` | Admin anlegen / Rechte geben / entziehen |
+| `nfm-server user list` / `user passwd <Name>` / `user delete <Name>` | Konten anzeigen / Passwort zurücksetzen / löschen |
+| `nfm-server folder list` | Ordner anzeigen (nur Namen und Besitzer) |
+| `nfm-server set name <Name>` / `set registration on\|off` / `set port <Port>` | Einstellungen |
+
+Optionen: `--data <Ordner>` (oder `NFM_SERVER_DATA`), `--port <Port>`, `--password-stdin`.
+
+### Nutzung
+
+- **Windows-App:** Tab **Server** → Server wird automatisch gefunden (sonst IP eintragen) → *Anmelden* oder *Profil anlegen* → *Neuer Ordner* / Doppelklick zum Öffnen. Im Ordnerfenster: **Als Netzlaufwerk verbinden** (einmalig UAC: Zertifikat vertrauen + WebDAV-Dienst für Dateien bis 4 GB).
+- **Admin:** Ist ein Admin-Profil angemeldet, erscheint oben der Tab **Admin**.
+- **macOS, iPhone, Linux:** im Browser `https://<Server-IP>:45830` öffnen. Für eine Anwendung im Dock: Safari → *Ablage → Zum Dock hinzufügen*.
+- **Netzlaufwerk auf dem Mac:** Zertifikat (Link in der Web-App, `/ca.crt`) per Doppelklick in den Schlüsselbund, dort *Immer vertrauen*. Dann Finder → *Gehe zu → Mit Server verbinden* (⌘K) → `https://<Server-IP>:45830/dav/<Ordnername>/` · Name: Ordnername · Passwort: Ordnerpasswort.
+
+> **Wichtig:** Ein vergessenes Ordnerpasswort kann niemand zurücksetzen – auch der Admin nicht. Der Ordner kann dann nur gelöscht werden.
+
 ## Speicherorte
 
 | Was | Wo |
@@ -75,6 +162,8 @@ Bei der Deinstallation werden Freigabe, Zugangskonto und Firewall-Regel entfernt
 | Setup-Protokoll | `%ProgramData%\NetworkFolderManager\setup.log` |
 | Gespeicherte Ordner-Passwörter | Windows-Anmeldeinformationsverwaltung |
 | Chat-Zertifikat | Zertifikatspeicher des Benutzers (`certmgr.msc` → Eigene Zertifikate) |
+| Bekannte NFM-Server | `settings.json` (Adresse, Fingerabdruck, Server-Zertifikat) |
+| Anmeldungen an NFM-Servern | Windows-Anmeldeinformationsverwaltung (`NetworkFolderManager:server:…`) |
 
 ## Kommandozeile
 
@@ -84,6 +173,7 @@ Bei der Deinstallation werden Freigabe, Zugangskonto und Firewall-Regel entfernt
 | `--setup-share "<Pfad>" "<Name>" ["<Passwortdatei>"]` | Netzwerkordner + Zugangskonto + verschlüsselte Freigabe + Firewall einrichten (Admin); die Passwortdatei wird sofort gelöscht |
 | `--setup-firewall` | Nur Firewall-Regeln (Admin) |
 | `--remove-share` | Freigabe + Firewall-Regel entfernen (Admin) |
+| `--setup-webdav "<Zertifikat>" <Fingerabdruck>` | NFM-Server-Zertifikat vertrauen + WebDAV-Client einrichten (Admin, für Netzlaufwerke) |
 
 Zum Testen mehrerer Instanzen auf einem PC: Umgebungsvariable `NFM_PROFILE=<Name>` setzen (eigene Einstellungen, eigener Chat-Port).
 
@@ -93,6 +183,13 @@ Zum Testen mehrerer Instanzen auf einem PC: Umgebungsvariable `NFM_PROFILE=<Name
 NetworkFolderManager/
 ├── README.md
 ├── build-installer.ps1                  # Publish + Inno Setup + portables ZIP
+├── build-server.ps1                     # NFM-Server für Linux/Windows/macOS
+├── NetworkFolderManager.Server/         # nfm-server (ASP.NET Core, ohne Oberfläche)
+│   ├── Api.cs · WebDav.cs · WebUi.cs    # HTTPS-API, WebDAV, Web-App
+│   ├── VaultFolder.cs · BlobStorage.cs  # verschlüsselte Ablage
+│   ├── ServerState.cs · Cli.cs          # Konten/Ordner/Admin, Kommandozeile
+│   ├── wwwroot/                         # Web-App (macOS, iPhone, Linux)
+│   └── deploy/                          # systemd-Dienst, Installationsskripte
 ├── installer/NetworkFolderManager.iss   # Inno-Setup-Skript
 └── NetworkFolderManager/
     ├── App.xaml / .cs                   # Start, Einzelinstanz, Kommandozeile

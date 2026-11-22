@@ -114,6 +114,14 @@ public partial class Peer : ObservableObject
     [ObservableProperty]
     private string? _shareUser;
 
+    /// <summary>Eigener Klingelton für Anrufe dieses Kontakts (Audiodatei; leer = Standard-Klingelton).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCustomRingtone))]
+    private string? _ringtonePath;
+
+    [JsonIgnore]
+    public bool HasCustomRingtone => !string.IsNullOrEmpty(RingtonePath);
+
     /// <summary>Gemerkter SHA-256-Fingerabdruck des TLS-Zertifikats (Trust on first use).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SecurityCode))]

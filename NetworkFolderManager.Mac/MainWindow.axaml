@@ -1,0 +1,387 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:NetworkFolderManager"
+        x:Class="NetworkFolderManager.MainWindow"
+        Title="NetworkFolderManager"
+        Icon="avares://NetworkFolderManager/Assets/appicon.png"
+        Width="1100" Height="760" MinWidth="880" MinHeight="580"
+        WindowStartupLocation="CenterScreen"
+        DragDrop.AllowDrop="True">
+
+    <Window.Resources>
+        <loc:PathToBitmapConverter x:Key="PathToBitmap"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="Border.bubble">
+            <Setter Property="Background" Value="{StaticResource BubbleIn}"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="MaxWidth" Value="460"/>
+        </Style>
+        <Style Selector="Border.bubble.out">
+            <Setter Property="Background" Value="{StaticResource BubbleOut}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+        <Style Selector="TextBlock.dot">
+            <Setter Property="Foreground" Value="#666670"/>
+            <Setter Property="Text" Value="●"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style Selector="TextBlock.dot.on">
+            <Setter Property="Foreground" Value="{StaticResource Success}"/>
+        </Style>
+        <Style Selector="Border.badge">
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="MinWidth" Value="20"/>
+            <Setter Property="Padding" Value="6,1"/>
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="16,12,16,12" RowDefinitions="*,Auto">
+        <TabControl x:Name="MainTabs" Grid.Row="0" SelectionChanged="MainTabs_SelectionChanged">
+
+            <!-- ===================== ORDNER ===================== -->
+            <TabItem Header="{loc:Tr 'Ordner'}">
+                <Grid ColumnDefinitions="1.15*,16,1*" Margin="0,12,0,0">
+
+                    <Border Grid.Column="0" Classes="card">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+                            <TextBlock Grid.Row="0" Classes="title" Text="{loc:Tr 'Netzwerkordner'}"/>
+                            <WrapPanel Grid.Row="1">
+                                <Button Classes="primary" Content="{loc:Tr 'Verbinden'}" Command="{Binding ConnectFolderCommand}"/>
+                                <Button Content="{loc:Tr 'Trennen'}" Command="{Binding DisconnectFolderCommand}"/>
+                                <Button Content="{loc:Tr 'Im Finder öffnen'}" Command="{Binding OpenFolderCommand}"/>
+                                <Button Content="{loc:Tr 'Manuellen Ordner entfernen'}" Command="{Binding RemoveFolderCommand}"/>
+                            </WrapPanel>
+                            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                                <TextBox Grid.Column="0" Text="{Binding ManualPath}" Watermark="{loc:Tr 'smb://Server/Freigabe hinzufügen'}"
+                                         KeyDown="ManualPath_KeyDown"/>
+                                <Button Grid.Column="1" Margin="8,0,0,0" Content="+" Command="{Binding AddManualFolderCommand}"/>
+                            </Grid>
+                            <ListBox Grid.Row="3" ItemsSource="{Binding NetworkFolders}" SelectedItem="{Binding SelectedFolder}"
+                                     DoubleTapped="Folders_DoubleTapped" Background="Transparent">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <TextBlock Grid.Column="0" Classes="dot" Classes.on="{Binding IsConnected}"
+                                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                                <TextBlock Classes="dim" Text="{Binding Description}" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Grid.Row="4" Classes="dim" Margin="2,8,2,0"
+                                       Text="{loc:Tr '● grün = verbunden · Doppelklick = öffnen/verbinden'}"/>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="2" Spacing="14">
+                        <Border Classes="card">
+                            <StackPanel>
+                                <TextBlock Classes="title" Text="{loc:Tr 'Datei-Upload'}"/>
+                                <TextBlock Classes="dim" Margin="0,0,0,10">
+                                    <Run Text="{loc:Tr 'Ziel:'}"/>
+                                    <Run Text="{Binding SelectedFolder.Path, Mode=OneWay, FallbackValue=–}" Foreground="White" FontWeight="SemiBold"/>
+                                </TextBlock>
+                                <Border BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="12" Padding="18" Margin="0,0,0,10">
+                                    <TextBlock Classes="dim" HorizontalAlignment="Center"
+                                               Text="{loc:Tr 'Dateien hierher ziehen – oder auswählen:'}"/>
+                                </Border>
+                                <WrapPanel>
+                                    <Button Content="{loc:Tr 'Dateien auswählen'}" Command="{Binding UploadFilesCommand}"/>
+                                </WrapPanel>
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UploadProgress}" IsVisible="{Binding IsBusy}"/>
+                                <TextBlock Text="{Binding UploadStatus}" Foreground="{StaticResource Success}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card">
+                            <StackPanel>
+                                <TextBlock Classes="title" Text="{loc:Tr 'Eigener Ordner – Benachrichtigungen'}"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Grid.Column="0" Text="{Binding OwnFolderPath}"/>
+                                    <Button Grid.Column="1" Margin="8,0,0,0" Content="…" Command="{Binding BrowseOwnFolderCommand}"/>
+                                </Grid>
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Classes="primary" Content="{loc:Tr 'Überwachung starten'}" Command="{Binding StartMonitoringCommand}"/>
+                                    <Button Content="{loc:Tr 'Stoppen'}" Command="{Binding StopMonitoringCommand}"/>
+                                </WrapPanel>
+                                <TextBlock Classes="dim" Text="{Binding MonitorStatus}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card">
+                            <Grid RowDefinitions="Auto,Auto,*">
+                                <TextBlock Classes="title" Text="{loc:Tr 'Neu im eigenen Ordner'}"/>
+                                <ListBox Grid.Row="2" ItemsSource="{Binding ReceivedFiles}" MaxHeight="150" Background="Transparent"
+                                         DoubleTapped="Received_DoubleTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="1" Classes="dim" Text="{Binding DetectedAt, StringFormat='{}{0:dd.MM. HH:mm}'}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ===================== CHAT ===================== -->
+            <TabItem x:Name="ChatTab">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Chat" VerticalAlignment="Center"/>
+                        <Border Classes="badge" IsVisible="{Binding Chat.HasUnread}">
+                            <TextBlock Text="{Binding Chat.TotalUnread}" Foreground="Black" FontSize="11" FontWeight="Bold"
+                                       HorizontalAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+                </TabItem.Header>
+
+                <Grid ColumnDefinitions="300,14,*" Margin="0,12,0,0">
+                    <Border Grid.Column="0" Classes="card" Padding="8">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <TextBlock Classes="title" Margin="8,4,0,8" Text="{loc:Tr 'Personen im Netzwerk'}"/>
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Chat.Peers}" SelectedItem="{Binding Chat.SelectedPeer}"
+                                     Background="Transparent">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Border Width="38" Height="38" CornerRadius="19" Background="{StaticResource Accent}" Margin="0,0,10,0">
+                                                <TextBlock Text="{Binding Initial}" Foreground="Black" FontWeight="Bold" FontSize="17"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Classes="dot" Classes.on="{Binding IsOnline}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                                <TextBlock Classes="dim" Text="{Binding LastMessagePreview}" TextTrimming="CharacterEllipsis" MaxLines="1"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="2" Classes="badge" IsVisible="{Binding HasUnread}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding UnreadCount}" Foreground="Black" FontSize="11" FontWeight="Bold"
+                                                           HorizontalAlignment="Center"/>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel Grid.Row="2" Margin="8,8,8,4">
+                                <TextBlock Classes="dim" Text="{Binding Chat.NetworkStatus}"/>
+                                <Button Classes="link" Margin="0,6,0,0" Content="{loc:Tr 'Empfangene Dateien öffnen'}"
+                                        Command="{Binding Chat.OpenReceiveFolderCommand}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2" Classes="card" Padding="0">
+                        <Grid>
+                            <!-- Platzhalter ohne Auswahl -->
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8" MaxWidth="420"
+                                        IsVisible="{Binding !Chat.HasSelectedPeer}">
+                                <TextBlock Classes="headline" HorizontalAlignment="Center" Text="{loc:Tr 'Wähle links eine Person aus'}"/>
+                                <TextBlock Classes="dim" TextAlignment="Center"
+                                           Text="{loc:Tr 'Alle im Netzwerk, die NetworkFolderManager installiert haben, erscheinen hier automatisch. Nachrichten, Bilder und Dateien gehen direkt von PC zu PC.'}"/>
+                            </StackPanel>
+
+                            <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding Chat.HasSelectedPeer}">
+                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="16,12,16,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Chat.SelectedPeer.DisplayName}" FontWeight="Bold" FontSize="16"/>
+                                        <TextBlock Classes="dim" Text="{Binding Chat.SelectedPeer.StatusText}"/>
+                                        <TextBlock Classes="dim" ToolTip.Tip="{loc:Tr 'Sicherheitsnummer dieses Kontakts – zum Abgleichen mit der Person (steht bei ihr unter Einstellungen).'}">
+                                            <Run Text="{loc:Tr '🔒 Verschlüsselt · Sicherheitsnummer'}"/>
+                                            <Run Text="{Binding Chat.SelectedPeer.SecurityCode, Mode=OneWay}" FontFamily="Menlo"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="{loc:Tr 'Verlauf löschen'}" Command="{Binding Chat.DeleteChatCommand}"/>
+                                </Grid>
+
+                                <Border Grid.Row="1" Background="#33FF6B6B" CornerRadius="10" Padding="12" Margin="16,0,16,8"
+                                        IsVisible="{Binding Chat.SelectedPeer.KeyChanged}">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock TextWrapping="Wrap" Foreground="{StaticResource Danger}"
+                                                   Text="{loc:Tr '⚠ Der Sicherheitsschlüssel dieses Kontakts hat sich geändert. Das passiert nach einer Neuinstallation – kann aber auch bedeuten, dass sich jemand als diese Person ausgibt. Nachrichten werden bis zur Bestätigung nicht gesendet. Fragen Sie die Person am besten kurz persönlich.'}"/>
+                                        <Button Grid.Column="1" Margin="12,0,0,0" Content="{loc:Tr 'Neuen Schlüssel akzeptieren'}"
+                                                Command="{Binding Chat.AcceptNewKeyCommand}"/>
+                                    </Grid>
+                                </Border>
+
+                                <ListBox x:Name="MessagesList" Grid.Row="2" ItemsSource="{Binding Chat.SelectedPeer.Messages}"
+                                         Background="Transparent" Margin="8,0" SelectionMode="Toggle">
+                                    <ListBox.Styles>
+                                        <Style Selector="ListBoxItem">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Padding" Value="4,3"/>
+                                        </Style>
+                                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </Style>
+                                        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </Style>
+                                    </ListBox.Styles>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Classes="bubble" Classes.out="{Binding Outgoing}" Tapped="Bubble_Tapped">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="{loc:Tr 'Öffnen'}"
+                                                                  Command="{Binding $parent[Window].DataContext.Chat.OpenAttachmentCommand}"
+                                                                  CommandParameter="{Binding}"/>
+                                                        <MenuItem Header="{loc:Tr 'Im Ordner anzeigen'}"
+                                                                  Command="{Binding $parent[Window].DataContext.Chat.ShowInFolderCommand}"
+                                                                  CommandParameter="{Binding}"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <StackPanel Spacing="4">
+                                                    <Image Source="{Binding FilePath, Converter={StaticResource PathToBitmap}}"
+                                                           IsVisible="{Binding IsImage}" MaxWidth="320" MaxHeight="260"
+                                                           Stretch="Uniform" HorizontalAlignment="Left"
+                                                           Cursor="Hand"/>
+                                                    <StackPanel IsVisible="{Binding IsFile}" Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Text="📎" FontSize="22" VerticalAlignment="Center"/>
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                                                            <TextBlock Classes="dim">
+                                                                <Run Text="{Binding FileSizeText, Mode=OneWay}"/>
+                                                                <Run Text="{loc:Tr ' · Klicken zum Öffnen'}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap"
+                                                                         IsVisible="{Binding HasText}"/>
+                                                    <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="4"
+                                                                 IsVisible="{Binding Status, Converter={x:Static loc:ChatConverters.IsSending}}"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                                                        <TextBlock Classes="dim" FontSize="10" Text="{Binding Timestamp, StringFormat='{}{0:dd.MM. HH:mm}'}"/>
+                                                        <TextBlock Classes="dim" FontSize="10" Text="{Binding StatusIcon}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" IsVisible="{Binding Status, Converter={x:Static loc:ChatConverters.IsFailed}}">
+                                                        <TextBlock Text="{loc:Tr 'Nicht zugestellt. '}" Foreground="{StaticResource Danger}" FontSize="11"/>
+                                                        <Button Classes="link" FontSize="11" Margin="0" Content="{loc:Tr 'Erneut senden'}"
+                                                                Command="{Binding $parent[Window].DataContext.Chat.RetryCommand}"
+                                                                CommandParameter="{Binding}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="16,8,16,14">
+                                    <Button Grid.Column="0" Content="📎" ToolTip.Tip="{loc:Tr 'Bild oder Datei senden'}"
+                                            Command="{Binding Chat.AttachFileCommand}" Margin="0,0,8,0"/>
+                                    <TextBox x:Name="MessageBox" Grid.Column="1" Text="{Binding Chat.MessageText}" AcceptsReturn="True"
+                                             TextWrapping="Wrap" MaxHeight="120" KeyDown="MessageBox_KeyDown"
+                                             Watermark="{loc:Tr 'Nachricht schreiben… (Enter = senden, Strg+V = Bild einfügen)'}"/>
+                                    <Button Grid.Column="2" Classes="primary" Margin="8,0,0,0" Content="➤" ToolTip.Tip="{loc:Tr 'Senden'}"
+                                            Command="{Binding Chat.SendCommand}"/>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ===================== EINSTELLUNGEN ===================== -->
+            <TabItem Header="{loc:Tr 'Einstellungen'}">
+                <ScrollViewer Margin="0,12,0,0">
+                    <Grid ColumnDefinitions="*,14,*">
+                        <StackPanel Grid.Column="0" Spacing="14">
+                            <Border Classes="card">
+                                <StackPanel>
+                                    <TextBlock Classes="title" Text="{loc:Tr 'Profil'}"/>
+                                    <TextBlock Classes="dim" Margin="0,0,0,6" Text="{loc:Tr 'So sehen dich andere im Chat:'}"/>
+                                    <TextBox Text="{Binding DisplayName}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="card">
+                                <StackPanel>
+                                    <TextBlock Classes="title" Text="{loc:Tr 'Sprache'}"/>
+                                    <WrapPanel>
+                                        <Button Content="Deutsch" Command="{Binding SetLanguageGermanCommand}"/>
+                                        <Button Content="English" Command="{Binding SetLanguageEnglishCommand}"/>
+                                    </WrapPanel>
+                                    <TextBlock Classes="dim" Text="{Binding LanguageStatus}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="card">
+                                <StackPanel>
+                                    <TextBlock Classes="title" Text="{loc:Tr 'Start &amp; Hintergrund'}"/>
+                                    <CheckBox Content="{loc:Tr 'Mit macOS starten (in der Menüleiste)'}" IsChecked="{Binding Autostart}"/>
+                                    <CheckBox Content="{loc:Tr 'Ordner-Überwachung beim Start automatisch aktivieren'}" IsChecked="{Binding MonitorOnStartup}"/>
+                                    <CheckBox Content="{loc:Tr 'Benachrichtigung bei neuen Chat-Nachrichten'}" IsChecked="{Binding ChatNotifications}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="card">
+                                <StackPanel>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="title" Text="{loc:Tr 'Updates'}"/>
+                                        <TextBlock Grid.Column="1" Classes="dim" Text="{Binding VersionText}"/>
+                                    </Grid>
+                                    <WrapPanel>
+                                        <Button Content="{loc:Tr 'Jetzt nach Updates suchen'}" Command="{Binding CheckForUpdatesCommand}"/>
+                                        <Button Classes="primary" Content="{loc:Tr 'Versionshinweise auf GitHub'}" IsVisible="{Binding HasUpdate}"
+                                                Command="{Binding OpenReleasesPageCommand}"/>
+                                    </WrapPanel>
+                                    <TextBlock Classes="dim" Text="{Binding UpdateStatus}"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Spacing="14">
+                            <Border Classes="card">
+                                <StackPanel>
+                                    <TextBlock Classes="title" Text="{loc:Tr 'Chat-Dateien'}"/>
+                                    <TextBlock Classes="dim" Margin="0,0,0,6" Text="{loc:Tr 'Hier werden empfangene Bilder und Dateien gespeichert:'}"/>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBox Text="{Binding Chat.ReceiveFolder}"/>
+                                        <Button Grid.Column="1" Margin="8,0,0,0" Content="…" Command="{Binding Chat.BrowseReceiveFolderCommand}"/>
+                                    </Grid>
+                                    <WrapPanel Margin="0,8,0,0">
+                                        <Button Classes="link" Margin="0,0,16,0" Content="{loc:Tr 'Ordner öffnen'}" Command="{Binding Chat.OpenReceiveFolderCommand}"/>
+                                        <Button Classes="link" Content="{loc:Tr 'Standard (Dokumente) wiederherstellen'}" Command="{Binding Chat.ResetReceiveFolderCommand}"/>
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="card">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="title" Text="{loc:Tr 'Hinweise'}"/>
+                                    <TextBlock Classes="dim" Text="{loc:Tr '• Beim ersten Start fragt macOS, ob NetworkFolderManager Geräte im lokalen Netzwerk finden darf – bitte erlauben (Systemeinstellungen → Datenschutz &amp; Sicherheit → Lokales Netzwerk). Ohne diese Erlaubnis funktionieren Chat und Erkennung nicht.'}"/>
+                                    <TextBlock Classes="dim" Text="{loc:Tr '• Netzwerkordner werden über macOS eingebunden; Benutzername und Passwort fragt macOS selbst ab und kann sie im Schlüsselbund merken.'}"/>
+                                    <TextBlock Classes="dim" Text="{loc:Tr '• Einen eigenen Ordner für andere freigeben: Systemeinstellungen → Allgemein → Teilen → Dateisharing.'}"/>
+                                    <TextBlock Classes="dim" Text="{loc:Tr '• Nachrichten, Bilder und Dateien im Chat gehen direkt von Mac zu PC bzw. Mac zu Mac im lokalen Netz – ohne Server, TLS-verschlüsselt. Jeder Kontakt wird beim ersten Kontakt an seinem Schlüssel erkannt; ändert sich dieser, warnt das Programm.'}"/>
+                                    <TextBlock Classes="dim" Text="{loc:Tr '• Fehlerprotokoll (bei Problemen bitte mitschicken): ~/Library/Application Support/NetworkFolderManager/error.log'}"/>
+                                    <TextBlock Classes="dim">
+                                        <Run Text="{loc:Tr '• Ihre Sicherheitsnummer im Chat:'}"/>
+                                        <Run Text="{Binding Chat.OwnSecurityCode, Mode=OneWay}" FontFamily="Menlo" Foreground="{StaticResource Accent}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <TextBlock Grid.Row="1" Classes="dim" Margin="4,8,0,0" TextTrimming="CharacterEllipsis" Text="{Binding StatusText}"/>
+    </Grid>
+</Window>

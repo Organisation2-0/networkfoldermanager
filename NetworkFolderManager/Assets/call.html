@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Call</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { color-scheme: dark; --bg:#0A0A0F; --fg:#F5F5F7; --dim:#9A9AA6; --glass:rgba(255,255,255,.08); --acc:#32D74B; --bad:#FF453A; }
+  * { box-sizing: border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:"Segoe UI Variable","Segoe UI",sans-serif; overflow:hidden; user-select:none; }
+  #stage { position:absolute; inset:0 0 76px 0; background:#000; display:flex; align-items:center; justify-content:center; }
+  #stage:fullscreen { inset:0; }
+  #remote { width:100%; height:100%; object-fit:contain; background:#000; }
+  #local { position:absolute; right:16px; bottom:16px; width:240px; max-height:160px; object-fit:contain; background:#111; border-radius:12px;
+           border:1px solid rgba(255,255,255,.18); box-shadow:0 6px 24px rgba(0,0,0,.5); transform:scaleX(-1); }
+  #local.screen { transform:none; }
+  #local.hidden { display:none; }
+  #status { position:absolute; left:0; right:0; top:42%; text-align:center; font-size:18px; color:var(--dim); pointer-events:none; }
+  #name { position:absolute; left:16px; top:12px; padding:6px 12px; border-radius:10px; background:var(--glass); backdrop-filter:blur(12px); font-weight:600; }
+  #stats { position:absolute; right:16px; top:12px; padding:6px 12px; border-radius:10px; background:var(--glass); font:12px Consolas,monospace; color:var(--dim); }
+  #bar { position:absolute; left:0; right:0; bottom:0; height:76px; display:flex; gap:10px; align-items:center; justify-content:center; padding:0 16px;
+         background:#101018; border-top:1px solid rgba(255,255,255,.08); }
+  button, select { font:inherit; color:var(--fg); background:var(--glass); border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:10px 16px; cursor:pointer; }
+  button:hover, select:hover { background:rgba(255,255,255,.16); }
+  button.on { background:rgba(50,215,75,.22); border-color:rgba(50,215,75,.6); }
+  button.off { background:rgba(255,69,58,.22); border-color:rgba(255,69,58,.6); }
+  button.hang { background:var(--bad); border-color:var(--bad); font-weight:600; }
+  option { background:#16161e; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="remote" autoplay playsinline></video>
+  <video id="local" class="hidden" autoplay playsinline muted></video>
+  <div id="status"></div>
+  <div id="name"></div>
+  <div id="stats"></div>
+</div>
+<div id="bar">
+  <button id="bMic"></button>
+  <button id="bCam"></button>
+  <button id="bScr"></button>
+  <select id="sQ" title=""></select>
+  <button id="bFull"></button>
+  <button id="bHang" class="hang"></button>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const post = m => window.chrome.webview.postMessage(m);
+
+// Qualitätsstufen. Maximum: 1440p60 (Höhe, Bildrate und Bitrate sind hart begrenzt).
+const QUALITY = {
+  '1440p60': { h: 1440, w: 2560, fps: 60, kbps: 25000 },
+  '1080p60': { h: 1080, w: 1920, fps: 60, kbps: 16000 },
+  '1080p30': { h: 1080, w: 1920, fps: 30, kbps: 8000 },
+  '720p30':  { h: 720,  w: 1280, fps: 30, kbps: 4000 }
+};
+
+let T = {};              // Übersetzungen aus der App
+let role = null;         // 'caller' | 'callee'
+let pc = null;
+let mic = null;          // Audio-Track
+let vTrack = null;       // aktuelle Videoquelle
+let source = 'none';     // 'none' | 'camera' | 'screen'
+let quality = '1440p60';
+let audioSender = null, videoSender = null;
+let queue = Promise.resolve();
+let statsTimer = null;
+let ended = false;
+let pendingSource = 'none';
+
+const t = (k, d) => T[k] || d || k;
+
+function setStatus(text) { $('status').textContent = text || ''; }
+
+function relabel() {
+  const micOn = mic && mic.enabled;
+  $('bMic').textContent = micOn ? '🎤 ' + t('mic', 'Mikrofon') : '🔇 ' + t('micOff', 'Stumm');
+  $('bMic').className = micOn ? 'on' : 'off';
+  $('bCam').textContent = '📷 ' + t('camera', 'Kamera');
+  $('bCam').className = source === 'camera' ? 'on' : '';
+  $('bScr').textContent = '🖥 ' + (source === 'screen' ? t('stopScreen', 'Teilen beenden') : t('screen', 'Bildschirm teilen'));
+  $('bScr').className = source === 'screen' ? 'on' : '';
+  $('bFull').textContent = '⛶ ' + t('fullscreen', 'Vollbild');
+  $('bHang').textContent = '📞 ' + t('hangup', 'Auflegen');
+  $('sQ').title = t('quality', 'Qualität');
+}
+
+function buildQualityList() {
+  const s = $('sQ'); s.innerHTML = '';
+  for (const k of Object.keys(QUALITY)) { const o = document.createElement('option'); o.value = k; o.textContent = k; s.appendChild(o); }
+  s.value = quality;
+  s.onchange = async () => { quality = s.value; await applyQuality(); };
+}
+
+// ---------- Medien ----------
+async function getMic() {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    return s.getAudioTracks()[0];
+  } catch (e) { post({ evt: 'warn', message: t('noMic', 'Kein Mikrofon verfügbar') + ': ' + e.message }); return null; }
+}
+
+async function getVideo(kind) {
+  const q = QUALITY[quality];
+  const video = { width: { ideal: q.w, max: 2560 }, height: { ideal: q.h, max: 1440 }, frameRate: { ideal: q.fps, max: 60 } };
+  if (kind === 'camera') {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: false, video });
+    const tr = s.getVideoTracks()[0]; tr.contentHint = 'motion'; return tr;
+  }
+  const s = await navigator.mediaDevices.getDisplayMedia({ audio: false, video });
+  const tr = s.getVideoTracks()[0]; tr.contentHint = 'detail';
+  tr.addEventListener('ended', () => { if (vTrack === tr) setSource('none'); });
+  return tr;
+}
+
+async function setSource(kind) {
+  if (ended) return;
+  let next = null;
+  if (kind !== 'none') {
+    try { next = await getVideo(kind); }
+    catch (e) {
+      post({ evt: 'warn', message: (kind === 'camera' ? t('noCam', 'Kamera nicht verfügbar') : t('noScreen', 'Bildschirmfreigabe abgebrochen')) + ': ' + e.message });
+      relabel(); return;
+    }
+  }
+  const old = vTrack;
+  vTrack = next; source = next ? kind : 'none';
+  if (videoSender) await videoSender.replaceTrack(next);
+  if (old) old.stop();
+  const lv = $('local');
+  if (next) { lv.srcObject = new MediaStream([next]); lv.className = kind === 'screen' ? 'screen' : ''; }
+  else { lv.srcObject = null; lv.className = 'hidden'; }
+  await applyQuality();
+  relabel();
+}
+
+// Höhe/Bildrate/Bitrate hart auf die gewählte Stufe (max. 1440p60) begrenzen
+async function applyQuality() {
+  const q = QUALITY[quality];
+  if (vTrack) {
+    try { await vTrack.applyConstraints({ width: { ideal: q.w, max: 2560 }, height: { ideal: q.h, max: 1440 }, frameRate: { ideal: q.fps, max: 60 } }); } catch (_) {}
+  }
+  if (!videoSender) return;
+  const p = videoSender.getParameters();
+  if (!p.encodings || !p.encodings.length) p.encodings = [{}];
+  const h = vTrack ? (vTrack.getSettings().height || q.h) : q.h;
+  const enc = p.encodings[0];
+  enc.maxBitrate = q.kbps * 1000;
+  enc.maxFramerate = q.fps;
+  enc.scaleResolutionDownBy = Math.max(1, h / q.h);
+  enc.priority = 'high'; enc.networkPriority = 'high';
+  try { await videoSender.setParameters(p); } catch (e) { console.warn('setParameters', e); }
+}
+
+// H.264 (Hardware-Encoder) bevorzugen, dann VP9, AV1, VP8
+function preferCodecs(tc) {
+  if (!tc.setCodecPreferences || !RTCRtpSender.getCapabilities) return;
+  const caps = RTCRtpSender.getCapabilities('video'); if (!caps) return;
+  const rank = c => { const m = c.mimeType.toLowerCase();
+    return m === 'video/h264' ? 0 : m === 'video/vp9' ? 1 : m === 'video/av1' ? 2 : m === 'video/vp8' ? 3 : 9; };
+  const list = caps.codecs.slice().sort((a, b) => rank(a) - rank(b));
+  try { tc.setCodecPreferences(list); } catch (_) {}
+}
+
+// ---------- Verbindung ----------
+function createPc() {
+  // Keine STUN/TURN-Server: reine Direktverbindung im lokalen Netzwerk (Peer-to-Peer).
+  pc = new RTCPeerConnection({ iceServers: [], bundlePolicy: 'max-bundle' });
+  pc.ontrack = ev => {
+    const v = $('remote');
+    if (ev.streams[0] && v.srcObject !== ev.streams[0]) v.srcObject = ev.streams[0];
+  };
+  pc.onconnectionstatechange = () => {
+    const s = pc.connectionState;
+    if (s === 'connected') { setStatus(''); post({ evt: 'state', state: 'connected' }); startStats(); }
+    else if (s === 'failed') post({ evt: 'state', state: 'failed' });
+    else if (s === 'disconnected') setStatus(t('reconnecting', 'Verbindung wird wiederhergestellt …'));
+    else if (s === 'connecting') setStatus(t('connecting', 'Verbinde …'));
+  };
+}
+
+function gathered() {
+  return new Promise(res => {
+    if (pc.iceGatheringState === 'complete') return res();
+    const done = () => { if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', done); res(); } };
+    pc.addEventListener('icegatheringstatechange', done);
+    setTimeout(res, 3000); // Host-Kandidaten sind sofort da
+  });
+}
+
+// Nicht-trickle: Angebot/Antwort enthalten bereits alle Kandidaten → nur ein Signal pro Richtung
+async function sendDescription() {
+  await gathered();
+  post({ evt: 'signal', data: { t: 'sdp', type: pc.localDescription.type, sdp: pc.localDescription.sdp } });
+}
+
+async function begin(msg) {
+  T = msg.t || {}; role = msg.role; quality = msg.quality || quality;
+  $('name').textContent = msg.peerName || '';
+  buildQualityList(); relabel();
+  setStatus(role === 'caller' ? t('waiting', 'Warte auf Antwort …') : t('connecting', 'Verbinde …'));
+
+  mic = await getMic();
+  createPc();
+
+  if (role === 'caller') {
+    const a = pc.addTransceiver('audio', { direction: 'sendrecv' });
+    const v = pc.addTransceiver('video', { direction: 'sendrecv' });
+    preferCodecs(v);
+    audioSender = a.sender; videoSender = v.sender;
+    if (mic) await audioSender.replaceTrack(mic);
+    await setSource(msg.source || 'none');
+    await pc.setLocalDescription(await pc.createOffer());
+    await sendDescription();
+  } else {
+    pendingSource = msg.source || 'none';
+  }
+  relabel();
+}
+
+async function onSignal(d) {
+  if (!pc || d.t !== 'sdp') return;
+  if (d.type === 'offer' && role === 'callee') {
+    await pc.setRemoteDescription({ type: 'offer', sdp: d.sdp });
+    for (const tc of pc.getTransceivers()) {
+      tc.direction = 'sendrecv';
+      if (tc.receiver.track.kind === 'audio') { audioSender = tc.sender; if (mic) await tc.sender.replaceTrack(mic); }
+      else { videoSender = tc.sender; preferCodecs(tc); }
+    }
+    await setSource(pendingSource);
+    await pc.setLocalDescription(await pc.createAnswer());
+    await sendDescription();
+  } else if (d.type === 'answer' && role === 'caller') {
+    await pc.setRemoteDescription({ type: 'answer', sdp: d.sdp });
+  }
+}
+
+// ---------- Anzeige der tatsächlich gesendeten/empfangenen Qualität ----------
+function startStats() {
+  if (statsTimer) return;
+  statsTimer = setInterval(async () => {
+    if (!pc) return;
+    try {
+      const rep = await pc.getStats(); let rx = '', tx = '';
+      rep.forEach(s => {
+        if (s.type === 'inbound-rtp' && s.kind === 'video' && s.frameWidth) rx = '▼ ' + s.frameWidth + '×' + s.frameHeight + '@' + Math.round(s.framesPerSecond || 0);
+        if (s.type === 'outbound-rtp' && s.kind === 'video' && s.frameWidth && s.bytesSent) tx = '▲ ' + s.frameWidth + '×' + s.frameHeight + '@' + Math.round(s.framesPerSecond || 0);
+      });
+      $('stats').textContent = [tx, rx].filter(Boolean).join('   ');
+    } catch (_) {}
+  }, 1000);
+}
+
+function shutdown() {
+  if (ended) return; ended = true;
+  clearInterval(statsTimer);
+  for (const tr of [mic, vTrack]) if (tr) tr.stop();
+  if (pc) { try { pc.close(); } catch (_) {} }
+  $('remote').srcObject = null; $('local').srcObject = null;
+}
+
+// ---------- Bedienung ----------
+$('bMic').onclick = () => { if (mic) { mic.enabled = !mic.enabled; relabel(); } };
+$('bCam').onclick = () => setSource(source === 'camera' ? 'none' : 'camera');
+$('bScr').onclick = () => setSource(source === 'screen' ? 'none' : 'screen');
+$('bHang').onclick = () => post({ evt: 'hangup' });
+$('bFull').onclick = () => { document.fullscreenElement ? document.exitFullscreen() : $('stage').requestFullscreen(); };
+$('remote').ondblclick = () => $('bFull').click();
+
+window.chrome.webview.addEventListener('message', ev => {
+  const m = ev.data;
+  queue = queue.then(async () => {
+    try {
+      if (m.cmd === 'start') await begin(m);
+      else if (m.cmd === 'signal') await onSignal(m.data);
+      else if (m.cmd === 'stop') shutdown();
+    } catch (e) { post({ evt: 'error', message: String((e && e.message) || e) }); }
+  });
+});
+post({ evt: 'ready' });
+</script>
+</body>
+</html>

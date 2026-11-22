@@ -15,7 +15,7 @@ namespace NetworkFolderManager.Services;
 /// </summary>
 public class ChatEnvelope
 {
-    public string Type { get; set; } = "msg"; // msg | ack
+    public string Type { get; set; } = "msg"; // msg | signal | ack
     public string Id { get; set; } = string.Empty;
     public string From { get; set; } = string.Empty;
     public string FromName { get; set; } = string.Empty;
@@ -42,6 +42,16 @@ public class ChatReceivedEventArgs : EventArgs
 }
 
 /// <summary>
+/// Ein empfangenes Anruf-Signal (Klingeln, Annehmen, WebRTC-Angebot/-Antwort, Auflegen). Inhalt: JSON in <see cref="ChatEnvelope.Text"/>.
+/// </summary>
+public class SignalReceivedEventArgs : EventArgs
+{
+    public required ChatEnvelope Envelope { get; init; }
+    public required string SenderAddress { get; init; }
+    public required string SenderFingerprint { get; init; }
+}
+
+/// <summary>
 /// Direkte, verschlüsselte Peer-to-Peer-Übertragung von Nachrichten, Bildern und Dateien im lokalen Netzwerk.
 /// Jede Verbindung ist TLS-verschlüsselt (gegenseitige Authentifizierung mit den Zertifikaten beider Seiten,
 /// Fingerabdrücke werden beim ersten Kontakt gemerkt und danach geprüft).
@@ -63,7 +73,9 @@ public sealed class ChatService : IDisposable
 
     /// <summary>Standard: neuer Ordner "NetworkFolderManager" in den Dokumenten des Benutzers.</summary>
     public static string DefaultReceiveFolder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        OperatingSystem.IsWindows()
+            ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Documents"),
         "NetworkFolderManager" + (SettingsService.Profile.Length > 0 ? "-" + SettingsService.Profile : ""));
 
     /// <summary>Ordner für empfangene Bilder/Dateien (in den Einstellungen bzw. im Installer wählbar).</summary>
@@ -73,6 +85,9 @@ public sealed class ChatService : IDisposable
     public int Port { get; private set; }
 
     public event EventHandler<ChatReceivedEventArgs>? MessageReceived;
+
+    /// <summary>Anruf-Signal eines (geprüften) Kontakts empfangen. Läuft auf einem Hintergrund-Thread.</summary>
+    public event EventHandler<SignalReceivedEventArgs>? SignalReceived;
 
     /// <param name="senderInfo">Liefert die eigenen Absenderdaten</param>
     /// <param name="certificate">Eigenes TLS-Zertifikat</param>
@@ -183,12 +198,24 @@ public sealed class ChatService : IDisposable
         try
         {
             env = await ReadEnvelopeAsync(stream, timeout.Token);
-            if (env == null || env.Type != "msg" || string.IsNullOrEmpty(env.From) || string.IsNullOrEmpty(env.Id))
+            if (env == null || (env.Type != "msg" && env.Type != "signal") || string.IsNullOrEmpty(env.From) || string.IsNullOrEmpty(env.Id))
                 return;
 
             var senderFingerprint = CertificateService.Fingerprint(stream.RemoteCertificate);
             if (!_verifySender(env.From, senderFingerprint))
                 throw new System.Security.SecurityException(Loc.T("Sicherheitsprüfung fehlgeschlagen: Der Absender hat einen anderen Schlüssel als bisher."));
+
+            if (env.Type == "signal")
+            {
+                await WriteEnvelopeAsync(stream, new ChatEnvelope { Type = "ack", Id = env.Id, Ok = true }, timeout.Token);
+                SignalReceived?.Invoke(this, new SignalReceivedEventArgs
+                {
+                    Envelope = env,
+                    SenderAddress = remote,
+                    SenderFingerprint = senderFingerprint
+                });
+                return;
+            }
 
             var message = new ChatMessage
             {
@@ -267,6 +294,68 @@ public sealed class ChatService : IDisposable
     }
 
     /// <summary>
+    /// Verbindet sich per TLS mit einem Peer. Der Server muss genau den gemerkten Schlüssel des Empfängers haben.
+    /// </summary>
+    private async Task<(TcpClient Client, SslStream Stream)> ConnectSecureAsync(Peer peer, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(peer.Address) || peer.Port <= 0)
+            throw new InvalidOperationException(Loc.T("Empfänger ist nicht erreichbar."));
+
+        var client = new TcpClient(AddressFamily.InterNetwork);
+        SslStream? stream = null;
+        try
+        {
+            await client.ConnectAsync(IPAddress.Parse(peer.Address), peer.Port, ct);
+
+            var expected = peer.CertFingerprint;
+            stream = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+            await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+            {
+                TargetHost = "NetworkFolderManager",
+                ClientCertificates = new X509CertificateCollection { _certificate },
+                LocalCertificateSelectionCallback = (_, _, _, _, _) => _certificate,
+                RemoteCertificateValidationCallback = (_, cert, _, _) =>
+                    cert != null && !string.IsNullOrEmpty(expected) &&
+                    string.Equals(CertificateService.Fingerprint(cert), expected, StringComparison.OrdinalIgnoreCase),
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            }, ct);
+            return (client, stream);
+        }
+        catch
+        {
+            stream?.Dispose();
+            client.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Sendet ein kurzes Anruf-Signal (JSON) an einen Peer und wartet auf die Empfangsbestätigung.
+    /// </summary>
+    public async Task SendSignalAsync(Peer peer, string json, CancellationToken ct = default)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(8));
+
+        var (client, stream) = await ConnectSecureAsync(peer, timeout.Token);
+        using var _ = client;
+        await using var __ = stream;
+
+        var env = _senderInfo();
+        env.Type = "signal";
+        env.Id = Guid.NewGuid().ToString("N");
+        env.Text = json;
+        env.Timestamp = DateTime.UtcNow;
+
+        await WriteEnvelopeAsync(stream, env, timeout.Token);
+        await stream.FlushAsync(timeout.Token);
+
+        var ack = await ReadEnvelopeAsync(stream, timeout.Token);
+        if (ack == null || ack.Type != "ack" || ack.Id != env.Id || !ack.Ok)
+            throw new IOException(ack?.Error ?? Loc.T("Keine Empfangsbestätigung erhalten."));
+    }
+
+    /// <summary>
     /// Sendet eine Nachricht an einen Peer. Wirft eine Exception, wenn der Peer nicht erreichbar ist
     /// oder die Nachricht ablehnt.
     /// </summary>
@@ -285,26 +374,12 @@ public sealed class ChatService : IDisposable
         }
 
         await using var _ = file;
-        using var client = new TcpClient(AddressFamily.InterNetwork);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(5));
 
-        await client.ConnectAsync(IPAddress.Parse(peer.Address), peer.Port, timeout.Token);
-
-        // TLS: Server muss genau den gemerkten Schlüssel des Empfängers haben
-        var expected = peer.CertFingerprint;
-        await using var stream = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
-        var clientCerts = new X509CertificateCollection { _certificate };
-        await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
-        {
-            TargetHost = "NetworkFolderManager",
-            ClientCertificates = clientCerts,
-            LocalCertificateSelectionCallback = (_, _, _, _, _) => _certificate,
-            RemoteCertificateValidationCallback = (_, cert, _, _) =>
-                cert != null && !string.IsNullOrEmpty(expected) &&
-                string.Equals(CertificateService.Fingerprint(cert), expected, StringComparison.OrdinalIgnoreCase),
-            CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck
-        }, timeout.Token);
+        var (client, stream) = await ConnectSecureAsync(peer, timeout.Token);
+        using var __ = client;
+        await using var ___ = stream;
 
         var env = _senderInfo();
         env.Type = "msg";

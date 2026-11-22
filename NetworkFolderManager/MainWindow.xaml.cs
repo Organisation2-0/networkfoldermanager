@@ -49,6 +49,13 @@ public partial class MainWindow : Window
             UpdateChatVisibility();
         };
 
+        // Admin-Tab verschwindet beim Abmelden → auf den Server-Tab wechseln
+        ViewModel.Servers.AdminAccessChanged += (_, _) =>
+        {
+            if (!ViewModel.Servers.HasAdminAccess && MainTabs.SelectedItem == AdminTab)
+                MainTabs.SelectedItem = ServerTab;
+        };
+
         ViewModel.Chat.MessageAdded += (_, _) =>
             Dispatcher.BeginInvoke(() => MessageScroller.ScrollToEnd(), System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -135,8 +142,12 @@ public partial class MainWindow : Window
         // Strg+V mit Bild/Dateien in der Zwischenablage → direkt senden
         if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
         {
-            if (!System.Windows.Clipboard.ContainsText() && chat.TrySendClipboardImage())
+            if (!System.Windows.Clipboard.ContainsText() &&
+                (System.Windows.Clipboard.ContainsImage() || System.Windows.Clipboard.ContainsFileDropList()))
+            {
                 e.Handled = true;
+                _ = chat.TrySendClipboardImageAsync();
+            }
         }
     }
 
@@ -160,7 +171,8 @@ public partial class MainWindow : Window
     private void OnDragOver(object sender, DragEventArgs e)
     {
         var hasFiles = e.Data.GetDataPresent(DataFormats.FileDrop);
-        var canDrop = IsChatTabSelected
+        var serverTab = MainTabs.SelectedItem == ServerTab || MainTabs.SelectedItem == AdminTab;
+        var canDrop = serverTab ? false : IsChatTabSelected
             ? ViewModel.Chat.SelectedPeer != null
             : ViewModel.SelectedFolder != null && !ViewModel.IsUploading;
 
@@ -170,7 +182,8 @@ public partial class MainWindow : Window
 
     private async void OnDrop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files)
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files ||
+            MainTabs.SelectedItem == ServerTab || MainTabs.SelectedItem == AdminTab)
             return;
 
         if (IsChatTabSelected)
@@ -192,6 +205,13 @@ public partial class MainWindow : Window
             ViewModel.OpenInExplorerCommand.Execute(null);
         else
             ViewModel.ConnectToFolderCommand.Execute(null);
+    }
+
+    private async void ServerFolderList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject d &&
+            ItemsControl.ContainerFromElement(ServerFolderList, d) is ListBoxItem { DataContext: ServerFolderItem item })
+            await ViewModel.Servers.OpenFolderAsync(item);
     }
 
     private void ReceivedList_MouseDoubleClick(object sender, MouseButtonEventArgs e)

@@ -14,6 +14,7 @@ namespace NetworkFolderManager;
 ///   --setup-share "Pfad" "Name" ["Passwortdatei"]  Netzwerkordner + Zugang + Freigabe + Firewall (Admin)
 ///   --setup-firewall                Nur Firewall-Regeln anlegen (Admin)
 ///   --remove-share                  Freigabe + Firewall-Regel entfernen (Admin, Deinstallation)
+///   --setup-webdav "Zertifikat" FP  Server-Zertifikat vertrauen + WebDAV-Client einrichten (Admin, für Netzlaufwerke)
 /// </summary>
 public partial class App : Application
 {
@@ -39,6 +40,9 @@ public partial class App : Application
                 case "--remove-share":
                     Shutdown(ShareSetupService.RemoveShare());
                     return;
+                case "--setup-webdav" when args.Length >= 3:
+                    Shutdown(WebDavMountService.SetupElevated(args[1], args[2]));
+                    return;
             }
         }
 
@@ -63,6 +67,7 @@ public partial class App : Application
         }
 
         base.OnStartup(e);
+        Platform.Current = new WindowsPlatform();
 
         // Alle unbehandelten Fehler protokollieren (Details: %APPDATA%\NetworkFolderManager\error.log)
         AppDomain.CurrentDomain.UnhandledException += (_, ex) =>
