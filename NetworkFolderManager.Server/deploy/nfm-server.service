@@ -10,7 +10,7 @@ Group=nfm
 Environment=NFM_SERVER_DATA=/var/lib/nfm-server
 Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR=/var/lib/nfm-server/.net
 ExecStart=/opt/nfm-server/nfm-server
-Restart=on-failure
+Restart=always
 RestartSec=5
 
 # Hardening
@@ -21,7 +21,7 @@ PrivateTmp=true
 PrivateDevices=true
 ProtectKernelTunables=true
 ProtectControlGroups=true
-ReadWritePaths=/var/lib/nfm-server
+ReadWritePaths=/var/lib/nfm-server /opt/nfm-server
 
 [Install]
 WantedBy=multi-user.target

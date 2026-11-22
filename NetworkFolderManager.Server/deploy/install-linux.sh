@@ -20,9 +20,11 @@ if ! id nfm >/dev/null 2>&1; then
 fi
 
 install -d -o nfm -g nfm -m 700 "$DATA"
-install -d -m 755 /opt/nfm-server
+# Program directory belongs to the service account so that automatic updates can replace the program
+install -d -o nfm -g nfm -m 755 /opt/nfm-server
+chown nfm:nfm /opt/nfm-server
 systemctl stop nfm-server 2>/dev/null || true
-install -m 755 "$DIR/nfm-server" /opt/nfm-server/nfm-server
+install -o nfm -g nfm -m 755 "$DIR/nfm-server" /opt/nfm-server/nfm-server
 
 # "nfm-server" command for administration (always runs as the nfm account)
 cat > /usr/local/bin/nfm-server <<'EOF'
@@ -53,5 +55,6 @@ echo
 /usr/local/bin/nfm-server info
 echo
 echo "Done. The server is running as a service (systemctl status nfm-server)."
+echo "Automatic updates are on (turn off: sudo nfm-server set autoupdate off)."
 echo "Create an admin account:   sudo nfm-server admin add <name>"
 echo "Or open https://<ip-address>:45830 in a browser and register with the setup code above."

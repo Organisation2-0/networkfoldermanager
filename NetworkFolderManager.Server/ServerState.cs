@@ -20,6 +20,7 @@ public sealed class ServerState
     public AttemptLimiter Limiter { get; } = new();
     public CertificateManager Certificates { get; private set; } = null!;
     public DiscoveryService? Discovery { get; set; }
+    public ServerUpdater? Updater { get; set; }
 
     private readonly int? _portOverride;
 

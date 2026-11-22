@@ -86,6 +86,8 @@ public sealed class ServerConfig
     public bool AllowRegistration { get; set; } = true;
     /// <summary>Server-Erkennung per UDP-Broadcast.</summary>
     public bool Discovery { get; set; } = true;
+    /// <summary>Install new versions from GitHub releases automatically.</summary>
+    public bool AutoUpdate { get; set; } = true;
 }
 
 public sealed class UserRecord

@@ -321,7 +321,7 @@ public static class Api
         }, adminOnly: true));
 
         admin.MapGet("/settings", (HttpContext ctx) => Run(ctx, s, _ =>
-            Task.FromResult(Results.Json(new ServerSettingsDto { Name = s.ServerName, AllowRegistration = s.AllowRegistration })), adminOnly: true));
+            Task.FromResult(Results.Json(Settings(s))), adminOnly: true));
 
         admin.MapPut("/settings", (HttpContext ctx) => Run(ctx, s, async _ =>
         {
@@ -333,14 +333,36 @@ public static class Api
             {
                 c.Name = name;
                 c.AllowRegistration = req.AllowRegistration;
+                if (req.AutoUpdate is { } auto)
+                    c.AutoUpdate = auto;
             });
-            return Results.Json(new ServerSettingsDto { Name = s.ServerName, AllowRegistration = s.AllowRegistration });
+            return Results.Json(Settings(s));
         }, adminOnly: true));
+
+        // ---------- Server updates ----------
+        admin.MapGet("/update", (HttpContext ctx) => Run(ctx, s, _ =>
+            Task.FromResult(Results.Json(s.Updater?.Status() ?? new ServerUpdateDto { CurrentVersion = ServerState.Version, State = "unsupported" })),
+            adminOnly: true));
+
+        admin.MapPost("/update/check", (HttpContext ctx) => Run(ctx, s, async _ =>
+            Results.Json(s.Updater == null ? new ServerUpdateDto { CurrentVersion = ServerState.Version, State = "unsupported" }
+                : await s.Updater.CheckAsync(ctx.RequestAborted)), adminOnly: true));
+
+        admin.MapPost("/update/install", (HttpContext ctx) => Run(ctx, s, async _ =>
+            Results.Json(s.Updater == null ? new ServerUpdateDto { CurrentVersion = ServerState.Version, State = "unsupported" }
+                : await s.Updater.InstallAsync(CancellationToken.None)), adminOnly: true));
 
         api.MapFallback((HttpContext ctx) => Results.Json(new ErrorDto { Error = "Unknown API endpoint.", Code = "notFound" }, statusCode: 404));
     }
 
     #region Hilfen
+
+    private static ServerSettingsDto Settings(ServerState s) => new()
+    {
+        Name = s.ServerName,
+        AllowRegistration = s.AllowRegistration,
+        AutoUpdate = s.Config.Read(c => c.AutoUpdate)
+    };
 
     /// <summary>Führt einen Handler aus und schreibt das Ergebnis selbst (so funktionieren auch Handler, die nur HttpContext haben).</summary>
     private static async Task Run(HttpContext ctx, ServerState s, Func<UserRecord, Task<IResult>> action,

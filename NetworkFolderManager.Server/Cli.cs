@@ -22,6 +22,8 @@ public static class Cli
           nfm-server set registration on|off                Allow/forbid self-registration
           nfm-server set port <port>                        Change the HTTPS port (restart required)
           nfm-server set storage <dir>                      Folder storage location (only while the server has no folders!)
+          nfm-server set autoupdate on|off                  Automatic updates from GitHub (default: on)
+          nfm-server update                                 Check for a new version and install it now
 
         Options:
           --data <dir>           Data directory (default: see "info"; also via NFM_SERVER_DATA)
@@ -49,6 +51,7 @@ public static class Cli
                     Console.WriteLine($"Storage:       {state.StorageRoot}");
                     Console.WriteLine($"Fingerprint:   {state.Certificates.FingerprintShort}");
                     Console.WriteLine($"Registration:  {(state.AllowRegistration ? "open" : "admins only")}");
+                    Console.WriteLine($"Auto-update:   {(state.Config.Read(c => c.AutoUpdate) ? "on" : "off")}{(ServerUpdater.Supported ? "" : " (not available for this build)")}");
                     Console.WriteLine($"Accounts:      {state.Users.Read(db => db.Users.Count)} · folders: {state.Folders.Read(db => db.Folders.Count)}");
                     if (state.EnsureSetupCode() is { } code)
                         Console.WriteLine($"Setup code:    {code}   (no admin yet – enter it when registering)");
@@ -124,6 +127,44 @@ public static class Cli
                     Console.WriteLine("Storage location saved – please restart the server.");
                     return 0;
 
+                case ["set", "autoupdate", var value]:
+                    state.Config.Update(c => c.AutoUpdate = value is "on" or "true" or "1" or "yes");
+                    Console.WriteLine($"Automatic updates: {(state.Config.Read(c => c.AutoUpdate) ? "on" : "off")}.");
+                    return 0;
+
+                case ["update"]:
+                {
+                    var updater = new ServerUpdater(state, Microsoft.Extensions.Logging.Abstractions.NullLogger<ServerUpdater>.Instance);
+                    var st = updater.CheckAsync().GetAwaiter().GetResult();
+                    Console.WriteLine($"Installed: {st.CurrentVersion} · latest: {st.LatestVersion ?? "unknown"}");
+                    if (st.State == "error")
+                    {
+                        Console.Error.WriteLine(st.Message);
+                        return 1;
+                    }
+                    if (!st.UpdateAvailable)
+                    {
+                        Console.WriteLine("nfm-server is up to date.");
+                        return 0;
+                    }
+                    if (!st.Supported)
+                    {
+                        Console.Error.WriteLine(st.Message);
+                        return 1;
+                    }
+                    Console.WriteLine($"Installing version {st.LatestVersion}...");
+                    st = updater.InstallAsync().GetAwaiter().GetResult();
+                    if (st.State is "installed" or "restarting")
+                    {
+                        Console.WriteLine(OperatingSystem.IsWindows()
+                            ? "Done. Restart the service: Restart-Service NFM-Server"
+                            : "Done. Restart the service: sudo systemctl restart nfm-server");
+                        return 0;
+                    }
+                    Console.Error.WriteLine(st.Message);
+                    return 1;
+                }
+
                 default:
                     Console.WriteLine(Usage);
                     return args.Length == 0 || args[0] is "help" or "--help" or "-h" or "/?" ? 0 : 1;
@@ -142,7 +183,15 @@ public static class Cli
     private static string ReadNewPassword(bool fromStdin)
     {
         if (fromStdin || Console.IsInputRedirected)
-            return Console.In.ReadLine() ?? "";
+        {
+            // Byte-Order-Mark (z.B. von PowerShell) und Zeilenende entfernen
+            var line = (Console.In.ReadLine() ?? "").TrimStart('﻿').TrimEnd('\r', '\n');
+            if (line.StartsWith("ï»¿", StringComparison.Ordinal)) // BOM als Latin-1 gelesen
+                line = line[3..];
+            if (Passwords.Validate(line) is { } error)
+                throw new VaultException(400, "weakPassword", error);
+            return line;
+        }
 
         while (true)
         {

@@ -24,8 +24,10 @@ Copy-Item $src $exe -Force
 if (-not $svc) {
     New-Service -Name "NFM-Server" -BinaryPathName "`"$exe`"" -DisplayName "NetworkFolderManager Server" `
         -Description "Encrypted, password-protected network folders (HTTPS, WebDAV, web app)" -StartupType Automatic | Out-Null
-    sc.exe failure "NFM-Server" reset= 86400 actions= restart/5000/restart/5000/restart/30000 | Out-Null
 }
+# Restart automatically (also after an automatic update, which exits with an error code)
+sc.exe failure "NFM-Server" reset= 86400 actions= restart/5000/restart/5000/restart/30000 | Out-Null
+sc.exe failureflag "NFM-Server" 1 | Out-Null
 
 # Firewall: private networks / domain only
 Remove-NetFirewallRule -DisplayName "NFM-Server*" -ErrorAction SilentlyContinue

@@ -891,6 +891,17 @@ public partial class ServerViewModel : ObservableObject, IDisposable
             var s = await settings;
             AdminServerName = s.Name;
             AdminAllowRegistration = s.AllowRegistration;
+            _loadingAutoUpdate = true;
+            AdminAutoUpdate = s.AutoUpdate ?? true;
+            _loadingAutoUpdate = false;
+            try
+            {
+                ShowUpdate(await entry.Client.AdminUpdateStatusAsync());
+            }
+            catch (VaultApiException)
+            {
+                ShowUpdate(null); // älterer Server ohne Update-Funktion
+            }
             AdminStatus = Loc.T("{0} Ordner · {1} Benutzer", AdminFolders.Count, AdminUsers.Count);
         }
         catch (VaultApiException ex)
@@ -1076,7 +1087,10 @@ public partial class ServerViewModel : ObservableObject, IDisposable
             return;
         try
         {
-            var s = await entry.Client!.AdminSaveSettingsAsync(new ServerSettingsDto { Name = AdminServerName.Trim(), AllowRegistration = AdminAllowRegistration });
+            var s = await entry.Client!.AdminSaveSettingsAsync(new ServerSettingsDto
+            {
+                Name = AdminServerName.Trim(), AllowRegistration = AdminAllowRegistration, AutoUpdate = AdminAutoUpdate
+            });
             entry.Name = s.Name;
             if (entry.Saved != null)
             {
@@ -1088,6 +1102,118 @@ public partial class ServerViewModel : ObservableObject, IDisposable
         catch (VaultApiException ex)
         {
             AdminStatus = ex.Message;
+        }
+    }
+
+    #endregion
+
+    #region Server-Updates (Admin)
+
+    private bool _loadingAutoUpdate;
+
+    [ObservableProperty] private bool _adminAutoUpdate = true;
+    [ObservableProperty] private string _adminUpdateText = string.Empty;
+    [ObservableProperty] private bool _adminUpdateAvailable;
+    [ObservableProperty] private bool _adminUpdateSupported;
+    [ObservableProperty] private bool _adminUpdateBusy;
+
+    partial void OnAdminAutoUpdateChanged(bool value)
+    {
+        if (!_loadingAutoUpdate && AdminServer != null)
+            _ = AdminSaveSettingsAsync();
+    }
+
+    private void ShowUpdate(ServerUpdateDto? u)
+    {
+        if (u == null)
+        {
+            AdminUpdateSupported = false;
+            AdminUpdateAvailable = false;
+            AdminUpdateText = Loc.T("Dieser Server unterstützt noch keine automatischen Updates – bitte einmal manuell aktualisieren.");
+            return;
+        }
+        AdminUpdateSupported = u.Supported;
+        AdminUpdateAvailable = u.UpdateAvailable && u.Supported && u.State != "restarting";
+        var versions = Loc.T("Installiert: {0} · Neueste: {1}", u.CurrentVersion, u.LatestVersion ?? "–");
+        var state = u.State switch
+        {
+            "checking" => Loc.T("Suche nach Updates..."),
+            "downloading" => Loc.T("Update wird heruntergeladen..."),
+            "restarting" => Loc.T("Update installiert – der Server startet neu..."),
+            "installed" => Loc.T("Update installiert – bitte nfm-server neu starten."),
+            "noPermission" => Loc.T("Keine Schreibrechte – neue Version einmal manuell installieren (Installationsskript); danach laufen Updates automatisch."),
+            "unsupported" => Loc.T("Dieser Server-Build kann sich nicht selbst aktualisieren."),
+            "error" => Loc.T("Fehler: {0}", u.Message ?? ""),
+            _ when u.UpdateAvailable => Loc.T("Version {0} ist verfügbar.", u.LatestVersion ?? ""),
+            _ when u.LastCheck != null => Loc.T("Der Server ist aktuell."),
+            _ => ""
+        };
+        AdminUpdateText = state.Length == 0 ? versions : versions + " · " + state;
+    }
+
+    [RelayCommand]
+    private async Task AdminCheckUpdateAsync()
+    {
+        if (AdminServer is not { } entry)
+            return;
+        AdminUpdateBusy = true;
+        AdminUpdateText = Loc.T("Suche nach Updates...");
+        try
+        {
+            ShowUpdate(await entry.Client!.AdminCheckUpdateAsync());
+        }
+        catch (VaultApiException ex)
+        {
+            AdminUpdateText = ex.Message;
+        }
+        finally
+        {
+            AdminUpdateBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task AdminInstallUpdateAsync()
+    {
+        if (AdminServer is not { } entry)
+            return;
+        AdminUpdateBusy = true;
+        AdminUpdateText = Loc.T("Update wird heruntergeladen...");
+        try
+        {
+            var u = await entry.Client!.AdminInstallUpdateAsync();
+            ShowUpdate(u);
+            if (u.State == "restarting" && u.LatestVersion != null)
+            {
+                // Warten, bis der Server mit der neuen Version wieder antwortet
+                for (var i = 0; i < 60; i++)
+                {
+                    await Task.Delay(2000);
+                    try
+                    {
+                        var info = await entry.Client.InfoAsync();
+                        if (info.Version == u.LatestVersion)
+                        {
+                            AdminStatus = Loc.T("Server auf {0} aktualisiert.", info.Version);
+                            await AdminRefreshAsync();
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // startet noch
+                    }
+                }
+                AdminUpdateText = Loc.T("Der Server ist noch nicht wieder erreichbar – bitte später aktualisieren.");
+            }
+        }
+        catch (VaultApiException ex)
+        {
+            AdminUpdateText = ex.Message;
+        }
+        finally
+        {
+            AdminUpdateBusy = false;
         }
     }
 

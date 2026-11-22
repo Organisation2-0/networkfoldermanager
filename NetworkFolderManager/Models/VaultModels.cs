@@ -224,6 +224,25 @@ public class ServerSettingsDto
 {
     public string Name { get; set; } = string.Empty;
     public bool AllowRegistration { get; set; }
+    /// <summary>Automatische Server-Updates (null = unverändert lassen, für ältere Clients).</summary>
+    public bool? AutoUpdate { get; set; }
+}
+
+/// <summary>Update-Status des Servers (Admin-Bereich).</summary>
+public class ServerUpdateDto
+{
+    public string CurrentVersion { get; set; } = string.Empty;
+    public string? LatestVersion { get; set; }
+    public bool UpdateAvailable { get; set; }
+    public bool AutoUpdate { get; set; }
+    /// <summary>false = Server kann sich nicht selbst aktualisieren (z.B. Entwicklungs-Build).</summary>
+    public bool Supported { get; set; }
+    public bool Busy { get; set; }
+    public DateTime? LastCheck { get; set; }
+    /// <summary>"idle", "checking", "downloading", "installed", "restarting", "error", "noPermission", "unsupported".</summary>
+    public string State { get; set; } = "idle";
+    /// <summary>Englische Detailmeldung (z.B. Fehlertext).</summary>
+    public string? Message { get; set; }
 }
 
 public static class VaultKinds

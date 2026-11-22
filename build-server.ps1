@@ -46,6 +46,10 @@ foreach ($rid in $Rids) {
     $zip = Join-Path $OutputDir "nfm-server-$Version-$rid.zip"
     if (Test-Path $zip) { Remove-Item $zip -Force }
     [System.IO.Compression.ZipFile]::CreateFromDirectory($pub, $zip, "Optimal", $false)
+
+    # Prüfsumme für die automatischen Server-Updates (mit ins GitHub-Release hochladen)
+    $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
+    [System.IO.File]::WriteAllText([System.IO.Path]::ChangeExtension($zip, ".sha256"), "$hash  $([System.IO.Path]::GetFileName($zip))`n")
     Write-Host ("  -> {0} ({1:N1} MB)" -f $zip, ((Get-Item $zip).Length / 1MB))
 }
 

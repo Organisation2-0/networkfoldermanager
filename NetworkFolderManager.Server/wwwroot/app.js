@@ -1184,7 +1184,7 @@ async function adminServer(body) {
       class: 'btn', onclick: async () => {
         err.textContent = '';
         try {
-          await api('PUT', '/admin/settings', { name: name.value, allowRegistration: reg.checked });
+          await api('PUT', '/admin/settings', { name: name.value, allowRegistration: reg.checked, autoUpdate: st.autoUpdate });
           S.info = await api('GET', '/info');
           toast(t('Gespeichert.'));
           render();
@@ -1195,7 +1195,92 @@ async function adminServer(body) {
       h('div', {}, t('Version')), h('div', {}, S.info.version),
       h('div', {}, t('Fingerabdruck')), h('div', { class: 'mono' }, fpShort(S.info.fingerprint)),
       h('div', {}, 'WebDAV'), h('div', { class: 'mono' }, location.origin + (EN ? '/dav/<folder>/' : '/dav/<Ordner>/')),
-      h('div', {}, EN ? 'Certificate' : 'Zertifikat'), h('div', {}, h('a', { href: '/ca.crt' }, t('Zertifikat herunterladen'))))));
+      h('div', {}, EN ? 'Certificate' : 'Zertifikat'), h('div', {}, h('a', { href: '/ca.crt' }, t('Zertifikat herunterladen'))))),
+    updateCard(st));
+}
+
+/** Text zum Update-Zustand des Servers. */
+function updateStateText(u) {
+  switch (u.state) {
+    case 'checking': return EN ? 'Checking for updates…' : 'Suche nach Updates…';
+    case 'downloading': return EN ? 'Downloading update…' : 'Update wird heruntergeladen…';
+    case 'restarting': return EN ? 'Update installed – the server is restarting…' : 'Update installiert – der Server startet neu…';
+    case 'installed': return EN ? 'Update installed – please restart nfm-server.' : 'Update installiert – bitte nfm-server neu starten.';
+    case 'noPermission': return EN ? 'No write permission – install the new version once manually (install script); after that updates are automatic.'
+      : 'Keine Schreibrechte – neue Version einmal manuell installieren (Installationsskript); danach laufen Updates automatisch.';
+    case 'unsupported': return EN ? 'This server build cannot update itself.' : 'Dieser Server-Build kann sich nicht selbst aktualisieren.';
+    case 'error': return (EN ? 'Error: ' : 'Fehler: ') + (u.message || '');
+    default:
+      if (u.updateAvailable) return EN ? `Version ${u.latestVersion} is available.` : `Version ${u.latestVersion} ist verfügbar.`;
+      return u.lastCheck ? (EN ? 'The server is up to date.' : 'Der Server ist aktuell.') : '';
+  }
+}
+
+function updateCard(settings) {
+  const auto = h('input', { type: 'checkbox', checked: settings.autoUpdate !== false });
+  const info = h('div', { class: 'small muted', style: { margin: '8px 0 12px' } }, '…');
+  const versions = h('div', { class: 'kv' });
+  const checkBtn = h('button', { class: 'btn secondary' }, EN ? 'Check now' : 'Jetzt prüfen');
+  const installBtn = h('button', { class: 'btn', hidden: true }, EN ? 'Update now' : 'Jetzt aktualisieren');
+
+  const show = u => {
+    versions.replaceChildren(
+      h('div', {}, EN ? 'Installed' : 'Installiert'), h('div', {}, u.currentVersion),
+      h('div', {}, EN ? 'Latest' : 'Neueste'), h('div', {}, u.latestVersion || '–'),
+      h('div', {}, EN ? 'Last check' : 'Zuletzt geprüft'), h('div', {}, fmtDateTime(u.lastCheck)));
+    info.textContent = updateStateText(u);
+    installBtn.hidden = !(u.updateAvailable && u.supported && u.state !== 'restarting');
+    checkBtn.disabled = installBtn.disabled = !u.supported || u.busy;
+    auto.disabled = !u.supported;
+  };
+
+  auto.addEventListener('change', async () => {
+    try {
+      await api('PUT', '/admin/settings', { name: S.info.name, allowRegistration: settings.allowRegistration, autoUpdate: auto.checked });
+      settings.autoUpdate = auto.checked;
+      toast(t('Gespeichert.'));
+    } catch (e) { toast(e.message, true); auto.checked = !auto.checked; }
+  });
+  checkBtn.addEventListener('click', async () => {
+    checkBtn.disabled = true; info.textContent = updateStateText({ state: 'checking' });
+    try { show(await api('POST', '/admin/update/check')); } catch (e) { toast(e.message, true); checkBtn.disabled = false; }
+  });
+  installBtn.addEventListener('click', async () => {
+    installBtn.disabled = true; info.textContent = updateStateText({ state: 'downloading' });
+    try {
+      const u = await api('POST', '/admin/update/install');
+      show(u);
+      if (u.state === 'restarting') waitForRestart(u.latestVersion);
+    } catch (e) { toast(e.message, true); installBtn.disabled = false; }
+  });
+
+  api('GET', '/admin/update').then(show).catch(() => { info.textContent = ''; });
+
+  return h('div', { class: 'card', style: { marginTop: '16px' } },
+    h('h3', {}, EN ? 'Server updates' : 'Server-Updates'),
+    h('label', { class: 'check', style: { marginTop: '10px' } }, auto, EN ? 'Install updates automatically' : 'Updates automatisch installieren'),
+    h('div', { class: 'small muted', style: { margin: '0 0 8px 28px' } }, EN
+      ? 'Checks GitHub every 6 hours. Accounts, folders and data are kept; the server restarts briefly.'
+      : 'Prüft alle 6 Stunden auf GitHub. Konten, Ordner und Daten bleiben erhalten; der Server startet kurz neu.'),
+    versions, info,
+    h('div', { style: { display: 'flex', gap: '8px' } }, checkBtn, installBtn));
+}
+
+/** Nach einem Update warten, bis der Server mit der neuen Version wieder erreichbar ist. */
+async function waitForRestart(version) {
+  for (let i = 0; i < 60; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    try {
+      const info = await (await fetch('/api/info', { headers: { 'X-NFM': '1' } })).json();
+      if (info.version === version) {
+        S.info = info;
+        toast(EN ? `Server updated to ${version}.` : `Server auf ${version} aktualisiert.`);
+        render();
+        return;
+      }
+    } catch { /* startet noch */ }
+  }
+  toast(EN ? 'The server did not come back yet – please reload the page later.' : 'Der Server ist noch nicht wieder erreichbar – bitte später neu laden.', true);
 }
 
 // ---------------------------------------------------------------- Start

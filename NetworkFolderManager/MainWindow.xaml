@@ -881,6 +881,17 @@
                                         </DockPanel>
                                         <CheckBox IsChecked="{Binding AdminAllowRegistration}" Margin="0,10,0,0"
                                                   Content="{loc:Tr 'Jeder darf sich selbst ein Profil anlegen'}"/>
+                                        <CheckBox IsChecked="{Binding AdminAutoUpdate}" IsEnabled="{Binding AdminUpdateSupported}" Margin="0,4,0,0"
+                                                  Content="{loc:Tr 'Server-Updates automatisch installieren'}"/>
+                                        <DockPanel Margin="0,6,0,0">
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Content="{loc:Tr 'Jetzt prüfen'}" Style="{StaticResource GlassButton}" Command="{Binding AdminCheckUpdateCommand}"
+                                                        IsEnabled="{Binding AdminUpdateSupported}"/>
+                                                <Button Content="{loc:Tr 'Jetzt aktualisieren'}" Command="{Binding AdminInstallUpdateCommand}"
+                                                        Visibility="{Binding AdminUpdateAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding AdminUpdateText}" Style="{StaticResource DimText}" VerticalAlignment="Center"/>
+                                        </DockPanel>
                                     </StackPanel>
                                 </ContentControl>
                             </Grid>

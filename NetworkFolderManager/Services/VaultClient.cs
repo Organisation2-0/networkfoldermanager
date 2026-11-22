@@ -331,6 +331,12 @@ public sealed class VaultClient : IDisposable
 
     public Task<ServerSettingsDto> AdminSettingsAsync() => SendAsync<ServerSettingsDto>(HttpMethod.Get, "api/admin/settings");
 
+    public Task<ServerUpdateDto> AdminUpdateStatusAsync() => SendAsync<ServerUpdateDto>(HttpMethod.Get, "api/admin/update");
+
+    public Task<ServerUpdateDto> AdminCheckUpdateAsync() => SendAsync<ServerUpdateDto>(HttpMethod.Post, "api/admin/update/check");
+
+    public Task<ServerUpdateDto> AdminInstallUpdateAsync() => SendAsync<ServerUpdateDto>(HttpMethod.Post, "api/admin/update/install");
+
     public Task<ServerSettingsDto> AdminSaveSettingsAsync(ServerSettingsDto s) =>
         SendAsync<ServerSettingsDto>(HttpMethod.Put, "api/admin/settings", s);
 

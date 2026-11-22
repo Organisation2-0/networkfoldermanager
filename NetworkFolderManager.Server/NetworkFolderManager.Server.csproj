@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>nfm-server</AssemblyName>
     <RootNamespace>NetworkFolderManager.Server</RootNamespace>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <Company>noobnet.eu</Company>
     <Authors>noobnet.eu</Authors>
     <Copyright>© 2026 noobnet.eu</Copyright>

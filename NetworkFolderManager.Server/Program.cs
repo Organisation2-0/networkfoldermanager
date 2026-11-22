@@ -42,6 +42,7 @@ builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
 builder.Services.AddSingleton(state);
 builder.Services.AddHostedService<DiscoveryService>();
 builder.Services.AddHostedService<MaintenanceService>();
+builder.Services.AddHostedService<ServerUpdater>();
 
 using (var bootLog = LoggerFactory.Create(l => l.AddSimpleConsole()))
     state.InitCertificates(bootLog.CreateLogger("TLS"));
